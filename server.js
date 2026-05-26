@@ -288,8 +288,8 @@ app.get('/products', async (req, res) => {
     });
 
     res.json({
-      count: visibleProducts.length,
-      data: visibleProducts,
+      count: products.length,
+      data: products,
     });
   } catch (error) {
     console.log(
