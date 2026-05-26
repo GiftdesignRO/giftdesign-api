@@ -6,6 +6,7 @@ const cors = require('cors');
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
+const nodemailer = require('nodemailer');
 
 const app = express();
 
@@ -160,6 +161,116 @@ const api = axios.create({
     password: process.env.MERCHANTPRO_API_SECRET,
   },
 });
+
+const transporter = nodemailer.createTransport({
+  host: process.env.SMTP_HOST,
+  port: Number(process.env.SMTP_PORT || 465),
+  secure: Number(process.env.SMTP_PORT || 465) === 465,
+  auth: {
+    user: process.env.SMTP_USER,
+    pass: process.env.SMTP_PASS,
+  },
+});
+
+async function sendOrderConfirmationEmail({
+  to,
+  name,
+  orderNumber,
+  items,
+  total,
+  deliveryMethod,
+  paymentMethod,
+}) {
+  if (
+    !process.env.SMTP_HOST ||
+    !process.env.SMTP_USER ||
+    !process.env.SMTP_PASS
+  ) {
+    console.log('EMAIL SKIPPED: SMTP env lipsă.');
+    return;
+  }
+
+  const productsHtml = items
+    .map((item) => {
+      const title = item.title || 'Produs';
+      const quantity = item.quantity || 1;
+      const price = item.price || '';
+
+      return `
+        <tr>
+          <td style="padding: 8px; border-bottom: 1px solid #eee;">
+            ${quantity} x ${title}
+          </td>
+          <td style="padding: 8px; border-bottom: 1px solid #eee; text-align: right;">
+            ${price}
+          </td>
+        </tr>
+      `;
+    })
+    .join('');
+
+  await transporter.sendMail({
+    from:
+      process.env.SMTP_FROM ||
+      `GiftDesign <${process.env.SMTP_USER}>`,
+    to,
+    subject: `Confirmare comandă ${orderNumber} - GiftDesign`,
+    html: `
+      <div style="font-family: Arial, sans-serif; color: #222; line-height: 1.5;">
+        <h2 style="color: #D51F3C;">Mulțumim pentru comandă!</h2>
+
+        <p>Salut ${name || ''},</p>
+
+        <p>
+          Comanda ta a fost primită cu succes și este în curs de procesare.
+        </p>
+
+        <p>
+          <strong>Număr comandă:</strong> ${orderNumber}
+        </p>
+
+        <table style="width: 100%; border-collapse: collapse; margin-top: 12px;">
+          <thead>
+            <tr>
+              <th style="text-align: left; padding: 8px; border-bottom: 2px solid #ddd;">
+                Produs
+              </th>
+              <th style="text-align: right; padding: 8px; border-bottom: 2px solid #ddd;">
+                Preț
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            ${productsHtml}
+          </tbody>
+        </table>
+
+        <p style="font-size: 16px;">
+          <strong>Total:</strong> ${total} Lei
+        </p>
+
+        <p>
+          <strong>Livrare:</strong> ${deliveryMethod}
+          <br>
+          <strong>Plată:</strong> ${paymentMethod}
+        </p>
+
+        <p>
+          Te vom anunța când comanda este pregătită sau predată curierului.
+        </p>
+
+        <br>
+
+        <p>
+          Cu drag,<br>
+          Echipa GiftDesign
+        </p>
+      </div>
+    `,
+  });
+
+  console.log('EMAIL CONFIRMARE TRIMIS:', to);
+}
 
 async function fetchAll(endpoint) {
   const limit = 100;
@@ -618,6 +729,23 @@ app.post(
       orders.push(localOrder);
 
       writeOrders(orders);
+
+      try {
+        await sendOrderConfirmationEmail({
+          to: customer.email,
+          name: customer.name,
+          orderNumber,
+          items,
+          total,
+          deliveryMethod: delivery_method,
+          paymentMethod: payment_method,
+        });
+      } catch (emailError) {
+        console.log(
+          'EMAIL ERROR:',
+          emailError.message
+        );
+      }
 
       res.status(201).json({
         message:
