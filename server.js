@@ -730,31 +730,31 @@ app.post(
 
       writeOrders(orders);
 
-      try {
-        await sendOrderConfirmationEmail({
-          to: customer.email,
-          name: customer.name,
-          orderNumber,
-          items,
-          total,
-          deliveryMethod: delivery_method,
-          paymentMethod: payment_method,
-        });
-      } catch (emailError) {
-        console.log(
-          'EMAIL ERROR:',
-          emailError.message
-        );
-      }
+      
 
       res.status(201).json({
-        message:
-          'Comandă trimisă în MerchantPro.',
-        order_id: localOrder.id,
-        order_number: localOrder.order_number,
-        merchantpro:
-          mpResponse.data,
-      });
+  message:
+    'Comandă trimisă în MerchantPro.',
+  order_id: localOrder.id,
+  order_number: localOrder.order_number,
+  merchantpro:
+    mpResponse.data,
+});
+
+sendOrderConfirmationEmail({
+  to: customer.email,
+  name: customer.name,
+  orderNumber,
+  items,
+  total,
+  deliveryMethod: delivery_method,
+  paymentMethod: payment_method,
+}).catch((emailError) => {
+  console.log(
+    'EMAIL ERROR:',
+    emailError.message
+  );
+});
     } catch (error) {
       console.log(
         'ORDER ERROR FULL:'
