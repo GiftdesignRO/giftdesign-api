@@ -3,78 +3,25 @@ require('dotenv').config();
 const express = require('express');
 const axios = require('axios');
 const cors = require('cors');
-const fs = require('fs');
-const path = require('path');
 const crypto = require('crypto');
 const nodemailer = require('nodemailer');
+const { Pool } = require('pg');
 
 const app = express();
 
 app.use(cors());
 app.use(express.json());
 
-const USERS_FILE = path.join(__dirname, 'users.json');
-const ORDERS_FILE = path.join(__dirname, 'orders.json');
-
 const JWT_SECRET =
   process.env.JWT_SECRET ||
   'giftdesign-super-secret';
 
-function ensureUsersFile() {
-  if (!fs.existsSync(USERS_FILE)) {
-    fs.writeFileSync(
-      USERS_FILE,
-      JSON.stringify([], null, 2)
-    );
-  }
-}
-
-function ensureOrdersFile() {
-  if (!fs.existsSync(ORDERS_FILE)) {
-    fs.writeFileSync(
-      ORDERS_FILE,
-      JSON.stringify([], null, 2)
-    );
-  }
-}
-
-function readUsers() {
-  ensureUsersFile();
-
-  try {
-    return JSON.parse(
-      fs.readFileSync(USERS_FILE, 'utf8')
-    );
-  } catch (error) {
-    return [];
-  }
-}
-
-function writeUsers(users) {
-  fs.writeFileSync(
-    USERS_FILE,
-    JSON.stringify(users, null, 2)
-  );
-}
-
-function readOrders() {
-  ensureOrdersFile();
-
-  try {
-    return JSON.parse(
-      fs.readFileSync(ORDERS_FILE, 'utf8')
-    );
-  } catch (error) {
-    return [];
-  }
-}
-
-function writeOrders(orders) {
-  fs.writeFileSync(
-    ORDERS_FILE,
-    JSON.stringify(orders, null, 2)
-  );
-}
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: {
+    rejectUnauthorized: false,
+  },
+});
 
 function hashPassword(password) {
   return crypto
@@ -481,7 +428,7 @@ app.get('/categories', async (req, res) => {
   }
 });
 
-app.post('/register', (req, res) => {
+app.post('/register', async (req, res) => {
   try {
     const name =
       (req.body.name || '').trim();
@@ -492,7 +439,7 @@ app.post('/register', (req, res) => {
         .toLowerCase();
 
     const password =
-      req.body.password || '';
+      (req.body.password || '').trim();
 
     if (!name || !email || !password) {
       return res.status(400).json({
@@ -501,32 +448,36 @@ app.post('/register', (req, res) => {
       });
     }
 
-    const users = readUsers();
-
-    const existing = users.find(
-      (user) => user.email === email
+    const existingResult = await pool.query(
+      'select id from public.users where email = $1 limit 1',
+      [email]
     );
 
-    if (existing) {
+    if (existingResult.rows.length > 0) {
       return res.status(409).json({
         error:
           'Există deja un cont cu acest email.',
       });
     }
 
-    const user = {
-      id: crypto.randomUUID(),
-      name,
-      email,
-      password_hash:
-        hashPassword(password),
-      created_at:
-        new Date().toISOString(),
-    };
+    const id = crypto.randomUUID();
+    const passwordHash = hashPassword(password);
 
-    users.push(user);
+    const result = await pool.query(
+      `
+        insert into public.users (
+          id,
+          name,
+          email,
+          password_hash
+        )
+        values ($1, $2, $3, $4)
+        returning id, name, email, created_at
+      `,
+      [id, name, email, passwordHash]
+    );
 
-    writeUsers(users);
+    const user = result.rows[0];
 
     const token =
       generateToken(user);
@@ -549,7 +500,7 @@ app.post('/register', (req, res) => {
   }
 });
 
-app.post('/login', (req, res) => {
+app.post('/login', async (req, res) => {
   try {
     const email =
       (req.body.email || '')
@@ -557,18 +508,28 @@ app.post('/login', (req, res) => {
         .toLowerCase();
 
     const password =
-      req.body.password || '';
+      (req.body.password || '').trim();
 
-    const users = readUsers();
+    const passwordHash = hashPassword(password);
 
-    const user = users.find(
-      (item) =>
-        item.email === email &&
-        item.password_hash ===
-          hashPassword(password)
+    const result = await pool.query(
+      `
+        select
+          id,
+          name,
+          email,
+          password_hash,
+          created_at
+        from public.users
+        where email = $1
+        limit 1
+      `,
+      [email]
     );
 
-    if (!user) {
+    const user = result.rows[0];
+
+    if (!user || user.password_hash !== passwordHash) {
       return res.status(401).json({
         error:
           'Email sau parolă greșită.',
@@ -710,59 +671,80 @@ app.post(
         mpResponse.data
       );
 
-      const orders = readOrders();
+      const countResult = await pool.query(
+        'select count(*)::int as count from public.orders'
+      );
 
       const orderNumber =
         `GD-${String(
-          orders.length + 1
+          countResult.rows[0].count + 1
         ).padStart(6, '0')}`;
 
-      const localOrder = {
-        id: crypto.randomUUID(),
-        order_number: orderNumber,
-        user_id: req.user.id,
-        customer,
-        items,
-        total,
-        delivery_method,
-        payment_method,
-        merchantpro_response: mpResponse.data,
-        merchantpro_order_id:
-          mpResponse.data?.id || null,
-        status: 'Trimisă în MerchantPro',
-        created_at:
-          new Date().toISOString(),
-      };
+      const orderId = crypto.randomUUID();
 
-      orders.push(localOrder);
+      const localOrderResult = await pool.query(
+        `
+          insert into public.orders (
+            id,
+            order_number,
+            user_id,
+            customer,
+            items,
+            total,
+            delivery_method,
+            payment_method,
+            merchantpro_response,
+            merchantpro_order_id,
+            status
+          )
+          values (
+            $1, $2, $3, $4, $5,
+            $6, $7, $8, $9, $10, $11
+          )
+          returning
+            id,
+            order_number
+        `,
+        [
+          orderId,
+          orderNumber,
+          req.user.id,
+          JSON.stringify(customer),
+          JSON.stringify(items),
+          Number(total || 0),
+          delivery_method,
+          payment_method,
+          JSON.stringify(mpResponse.data),
+          mpResponse.data?.id?.toString() || null,
+          'Trimisă în MerchantPro',
+        ]
+      );
 
-      writeOrders(orders);
-
-      
+      const localOrder = localOrderResult.rows[0];
 
       res.status(201).json({
-  message:
-    'Comandă trimisă în MerchantPro.',
-  order_id: localOrder.id,
-  order_number: localOrder.order_number,
-  merchantpro:
-    mpResponse.data,
-});
+        message:
+          'Comandă trimisă în MerchantPro.',
+        order_id: localOrder.id,
+        order_number: localOrder.order_number,
+        merchantpro:
+          mpResponse.data,
+      });
 
-sendOrderConfirmationEmail({
-  to: customer.email,
-  name: customer.name,
-  orderNumber,
-  items,
-  total,
-  deliveryMethod: delivery_method,
-  paymentMethod: payment_method,
-}).catch((emailError) => {
-  console.log(
-    'EMAIL ERROR:',
-    emailError.message
-  );
-});
+      sendOrderConfirmationEmail({
+        to: customer.email,
+        name: customer.name,
+        orderNumber,
+        items,
+        total,
+        deliveryMethod: delivery_method,
+        paymentMethod: payment_method,
+      }).catch((emailError) => {
+        console.log(
+          'EMAIL ERROR:',
+          emailError.message
+        );
+      });
     } catch (error) {
       console.log(
         'ORDER ERROR FULL:'
@@ -789,18 +771,33 @@ sendOrderConfirmationEmail({
 app.get(
   '/orders',
   authMiddleware,
-  (req, res) => {
+  async (req, res) => {
     try {
-      const orders = readOrders();
-
-      const mine = orders.filter(
-        (o) =>
-          o.user_id === req.user.id
+      const result = await pool.query(
+        `
+          select
+            id,
+            order_number,
+            user_id,
+            customer,
+            items,
+            total,
+            delivery_method,
+            payment_method,
+            merchantpro_response,
+            merchantpro_order_id,
+            status,
+            created_at
+          from public.orders
+          where user_id = $1
+          order by created_at desc
+        `,
+        [req.user.id]
       );
 
       res.json({
-        count: mine.length,
-        data: mine,
+        count: result.rows.length,
+        data: result.rows,
       });
     } catch (error) {
       console.log(error.message);
@@ -816,7 +813,7 @@ app.get(
 app.get(
   '/admin/orders',
   authMiddleware,
-  (req, res) => {
+  async (req, res) => {
     try {
       if (
         req.user.email !==
@@ -827,11 +824,29 @@ app.get(
         });
       }
 
-      const orders = readOrders();
+      const result = await pool.query(
+        `
+          select
+            id,
+            order_number,
+            user_id,
+            customer,
+            items,
+            total,
+            delivery_method,
+            payment_method,
+            merchantpro_response,
+            merchantpro_order_id,
+            status,
+            created_at
+          from public.orders
+          order by created_at desc
+        `
+      );
 
       res.json({
-        count: orders.length,
-        data: orders,
+        count: result.rows.length,
+        data: result.rows,
       });
     } catch (error) {
       console.log(error.message);
@@ -848,9 +863,6 @@ const PORT =
   process.env.PORT || 3000;
 
 app.listen(PORT, () => {
-  ensureUsersFile();
-  ensureOrdersFile();
-
   console.log(
     `Server running on port ${PORT}`
   );
