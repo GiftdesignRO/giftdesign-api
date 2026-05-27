@@ -11,6 +11,7 @@ const app = express();
 
 app.use(cors());
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
 const JWT_SECRET =
   process.env.JWT_SECRET ||
@@ -430,16 +431,11 @@ app.get('/categories', async (req, res) => {
 
 app.post('/register', async (req, res) => {
   try {
-    const name =
-      (req.body.name || '').trim();
+    const body = req.body || {};
 
-    const email =
-      (req.body.email || '')
-        .trim()
-        .toLowerCase();
-
-    const password =
-      (req.body.password || '').trim();
+const name = (body.name || '').trim();
+const email = (body.email || '').trim().toLowerCase();
+const password = (body.password || '').trim();
 
     if (!name || !email || !password) {
       return res.status(400).json({
@@ -502,13 +498,15 @@ app.post('/register', async (req, res) => {
 
 app.post('/login', async (req, res) => {
   try {
-    const email =
-      (req.body.email || '')
-        .trim()
-        .toLowerCase();
+    const body = req.body || {};
 
-    const password =
-      (req.body.password || '').trim();
+const email =
+  (body.email || '')
+    .trim()
+    .toLowerCase();
+
+const password =
+  (body.password || '').trim();
 
     const passwordHash = hashPassword(password);
 
