@@ -6,6 +6,7 @@ const cors = require('cors');
 const crypto = require('crypto');
 const nodemailer = require('nodemailer');
 const { Pool } = require('pg');
+const dns = require('dns');
 
 const app = express();
 
@@ -118,6 +119,9 @@ const transporter = nodemailer.createTransport({
   secure: smtpPort === 465,
   requireTLS: smtpPort === 587,
   family: 4,
+  lookup: (hostname, options, callback) => {
+  return dns.lookup(hostname, { family: 4 }, callback);
+},
   auth: {
     user: process.env.SMTP_USER,
     pass: process.env.SMTP_PASS,
