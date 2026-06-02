@@ -171,13 +171,27 @@ async function sendOrderConfirmationEmail({
     })
     .join('');
 
-  await transporter.sendMail({
-    from:
-      process.env.SMTP_FROM ||
-      `GiftDesign <${process.env.SMTP_USER}>`,
-    to,
+  const fromEmail =
+  process.env.SMTP_FROM_EMAIL || 'info@giftdesign.ro';
+
+const fromName =
+  process.env.SMTP_FROM_NAME || 'GiftDesign';
+
+await axios.post(
+  'https://api.brevo.com/v3/smtp/email',
+  {
+    sender: {
+      name: fromName,
+      email: fromEmail,
+    },
+    to: [
+      {
+        email: to,
+        name: name || '',
+      },
+    ],
     subject: `Confirmare comandă ${orderNumber} - GiftDesign`,
-    html: `
+    htmlContent: `
       <div style="font-family: Arial, sans-serif; color: #222; line-height: 1.5;">
         <h2 style="color: #D51F3C;">Mulțumim pentru comandă!</h2>
 
@@ -229,7 +243,15 @@ async function sendOrderConfirmationEmail({
         </p>
       </div>
     `,
-  });
+  },
+  {
+    headers: {
+      accept: 'application/json',
+      'api-key': process.env.BREVO_API_KEY,
+      'content-type': 'application/json',
+    },
+  }
+);
 
   console.log('EMAIL CONFIRMARE TRIMIS:', to);
 }
@@ -864,20 +886,33 @@ app.get(
 );
 app.get('/test-email', async (req, res) => {
   try {
-    await transporter.sendMail({
-      from:
-        process.env.SMTP_FROM ||
-        `GiftDesign <${process.env.SMTP_USER}>`,
-
-      to: 'info@giftdesign.ro',
-
-      subject: 'Test email GiftDesign',
-
-      html: `
-        <h2>Email funcțional 🎉</h2>
-        <p>Brevo + Render + Nodemailer funcționează.</p>
-      `,
-    });
+    await axios.post(
+  'https://api.brevo.com/v3/smtp/email',
+  {
+    sender: {
+      name: process.env.SMTP_FROM_NAME || 'GiftDesign',
+      email: process.env.SMTP_FROM_EMAIL || 'info@giftdesign.ro',
+    },
+    to: [
+      {
+        email: 'info@giftdesign.ro',
+        name: 'GiftDesign',
+      },
+    ],
+    subject: 'Test email GiftDesign',
+    htmlContent: `
+      <h2>Email funcțional 🎉</h2>
+      <p>Brevo API HTTP + Render funcționează.</p>
+    `,
+  },
+  {
+    headers: {
+      accept: 'application/json',
+      'api-key': process.env.BREVO_API_KEY,
+      'content-type': 'application/json',
+    },
+  }
+);
 
     res.json({
       success: true,
