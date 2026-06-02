@@ -143,14 +143,10 @@ async function sendOrderConfirmationEmail({
   deliveryMethod,
   paymentMethod,
 }) {
-  if (
-    !process.env.SMTP_HOST ||
-    !process.env.SMTP_USER ||
-    !process.env.SMTP_PASS
-  ) {
-    console.log('EMAIL SKIPPED: SMTP env lipsă.');
-    return;
-  }
+  if (!process.env.BREVO_API_KEY) {
+  console.log('EMAIL SKIPPED: BREVO_API_KEY lipsă.');
+  return;
+}
 
   const productsHtml = items
     .map((item) => {
@@ -623,13 +619,13 @@ app.post(
           product_ean: null,
           product_name: item.title,
           product_tax_name: 'TVA',
-          product_tax_percent: 19,
+          product_tax_percent: 21,
           quantity,
-          unit_price_net: Number((price / 1.19).toFixed(2)),
-          unit_tax_amount: Number((price - price / 1.19).toFixed(2)),
+          unit_price_net: Number((price / 1.21).toFixed(2)),
+          unit_tax_amount: Number((price - price / 1.21).toFixed(2)),
           unit_price_gross: price,
-          line_subtotal_net: Number((subtotal / 1.19).toFixed(2)),
-          line_tax_amount: Number((subtotal - subtotal / 1.19).toFixed(2)),
+          line_subtotal_net: Number((subtotal / 1.21).toFixed(2)),
+          line_tax_amount: Number((subtotal - subtotal / 1.21).toFixed(2)),
           line_subtotal_gross: subtotal,
           meta_fields: {
             source: 'GiftDesign Mobile App',
@@ -641,13 +637,16 @@ app.post(
         payment_method === 'Card online'
           ? 'mobilpay'
           : 'cash_delivery';
-
+       const shippingAmount =
+        delivery_method === 'Curier rapid' && Number(total || 0) < 400
+         ? 24.9
+         : 0;
       const merchantPayload = {
         payment_status: 'awaiting',
         payment_method_code: paymentMethodCode,
         shipping_status: 'awaiting',
         shipping_method_id: 0,
-        shipping_amount: null,
+        shipping_amount: shippingAmount,
 
         customer_email: customer.email,
         customer_device: 'mobile',
