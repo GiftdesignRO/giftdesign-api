@@ -166,6 +166,13 @@ async function sendOrderConfirmationEmail({
       `;
     })
     .join('');
+    const shippingAmount =
+  deliveryMethod === 'Curier rapid' && Number(total || 0) < 400
+    ? 24.9
+    : 0;
+
+const productsSubtotal =
+  Number(total || 0) - shippingAmount;
 
   const fromEmail =
   process.env.SMTP_FROM_EMAIL || 'info@giftdesign.ro';
@@ -217,9 +224,19 @@ await axios.post(
           </tbody>
         </table>
 
-        <p style="font-size: 16px;">
-          <strong>Total:</strong> ${Number(total).toFixed(2)} Lei
-        </p>
+        
+          <p style="font-size: 15px;">
+  <strong>Subtotal produse:</strong> ${productsSubtotal.toFixed(2)} Lei
+</p>
+
+<p style="font-size: 15px;">
+  <strong>Transport:</strong> ${shippingAmount.toFixed(2)} Lei
+</p>
+
+<p style="font-size: 16px;">
+  <strong>Total:</strong> ${Number(total).toFixed(2)} Lei
+</p>
+        
 
         <p>
           <strong>Livrare:</strong> ${deliveryMethod}
