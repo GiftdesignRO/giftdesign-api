@@ -222,7 +222,7 @@ await axios.post(
         </table>
 
         <p style="font-size: 16px;">
-          <strong>Total:</strong> ${total} Lei
+          <strong>Total:</strong> ${Number(total).toFixed(2)} Lei
         </p>
 
         <p>
