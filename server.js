@@ -862,6 +862,39 @@ app.get(
     }
   }
 );
+app.get('/test-email', async (req, res) => {
+  try {
+    await transporter.sendMail({
+      from:
+        process.env.SMTP_FROM ||
+        `GiftDesign <${process.env.SMTP_USER}>`,
+
+      to: 'info@giftdesign.ro',
+
+      subject: 'Test email GiftDesign',
+
+      html: `
+        <h2>Email funcțional 🎉</h2>
+        <p>Brevo + Render + Nodemailer funcționează.</p>
+      `,
+    });
+
+    res.json({
+      success: true,
+      message: 'Email trimis.',
+    });
+  } catch (error) {
+    console.log(
+      'TEST EMAIL ERROR:',
+      error
+    );
+
+    res.status(500).json({
+      success: false,
+      error: error.message,
+    });
+  }
+});
 
 const PORT =
   process.env.PORT || 3000;
