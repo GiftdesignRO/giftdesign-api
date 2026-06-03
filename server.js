@@ -1201,50 +1201,6 @@ app.get('/admin/add-reset-password-columns', async (req, res) => {
     });
   }
 });
-app.get('/admin/add-user-profile-columns', async (req, res) => {
-  try {
-    await pool.query(`
-      ALTER TABLE public.users
-      ADD COLUMN IF NOT EXISTS customer_type TEXT DEFAULT 'individual',
-
-      ADD COLUMN IF NOT EXISTS billing_name TEXT,
-      ADD COLUMN IF NOT EXISTS billing_email TEXT,
-      ADD COLUMN IF NOT EXISTS billing_phone TEXT,
-      ADD COLUMN IF NOT EXISTS billing_address TEXT,
-      ADD COLUMN IF NOT EXISTS billing_city TEXT,
-      ADD COLUMN IF NOT EXISTS billing_county TEXT,
-      ADD COLUMN IF NOT EXISTS billing_postal_code TEXT,
-
-      ADD COLUMN IF NOT EXISTS company_name TEXT,
-      ADD COLUMN IF NOT EXISTS company_cui TEXT,
-      ADD COLUMN IF NOT EXISTS company_reg_com TEXT,
-      ADD COLUMN IF NOT EXISTS company_iban TEXT,
-      ADD COLUMN IF NOT EXISTS company_bank TEXT,
-      ADD COLUMN IF NOT EXISTS company_contact_person TEXT,
-
-      ADD COLUMN IF NOT EXISTS shipping_same_as_billing BOOLEAN DEFAULT true,
-      ADD COLUMN IF NOT EXISTS shipping_name TEXT,
-      ADD COLUMN IF NOT EXISTS shipping_email TEXT,
-      ADD COLUMN IF NOT EXISTS shipping_phone TEXT,
-      ADD COLUMN IF NOT EXISTS shipping_address TEXT,
-      ADD COLUMN IF NOT EXISTS shipping_city TEXT,
-      ADD COLUMN IF NOT EXISTS shipping_county TEXT,
-      ADD COLUMN IF NOT EXISTS shipping_postal_code TEXT;
-    `);
-
-    res.json({
-      success: true,
-      message: 'Coloane profil utilizator adaugate.',
-    });
-  } catch (error) {
-    console.error('DB profile migration error:', error);
-
-    res.status(500).json({
-      success: false,
-      error: error.message,
-    });
-  }
-});
 app.listen(PORT, () => {
   console.log(
     `Server running on port ${PORT}`
