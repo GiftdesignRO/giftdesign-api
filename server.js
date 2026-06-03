@@ -1344,6 +1344,32 @@ app.post('/profile', authMiddleware, async (req, res) => {
     });
   }
 });
+app.get('/admin/add-role-column', async (req, res) => {
+  try {
+    await pool.query(`
+      ALTER TABLE public.users
+      ADD COLUMN IF NOT EXISTS role TEXT DEFAULT 'user'
+    `);
+
+    await pool.query(`
+      UPDATE public.users
+      SET role = 'admin'
+      WHERE email = 'info@giftdesign.ro'
+    `);
+
+    res.json({
+      success: true,
+      message: 'Coloana role a fost adăugată și adminul a fost setat.',
+    });
+  } catch (error) {
+    console.error('Add role column error:', error);
+
+    res.status(500).json({
+      success: false,
+      error: error.message,
+    });
+  }
+});
 app.listen(PORT, () => {
   console.log(
     `Server running on port ${PORT}`
