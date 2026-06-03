@@ -949,7 +949,26 @@ app.get('/test-email', async (req, res) => {
 
 const PORT =
   process.env.PORT || 3000;
+app.get('/admin/add-reset-password-columns', async (req, res) => {
+  try {
+    await pool.query(`
+      ALTER TABLE public.users
+      ADD COLUMN IF NOT EXISTS reset_token TEXT,
+      ADD COLUMN IF NOT EXISTS reset_token_expires TIMESTAMP;
+    `);
 
+    res.json({
+      success: true,
+      message: 'Coloane reset password adaugate.'
+    });
+  } catch (error) {
+    console.error('DB migration error:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
 app.listen(PORT, () => {
   console.log(
     `Server running on port ${PORT}`
