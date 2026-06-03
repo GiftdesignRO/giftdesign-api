@@ -1201,6 +1201,149 @@ app.get('/admin/add-reset-password-columns', async (req, res) => {
     });
   }
 });
+app.get('/profile', authMiddleware, async (req, res) => {
+  try {
+    const result = await pool.query(
+      `
+        select
+          id,
+          name,
+          email,
+          customer_type,
+
+          billing_name,
+          billing_email,
+          billing_phone,
+          billing_address,
+          billing_city,
+          billing_county,
+          billing_postal_code,
+
+          company_name,
+          company_cui,
+          company_reg_com,
+          company_iban,
+          company_bank,
+          company_contact_person,
+
+          shipping_same_as_billing,
+          shipping_name,
+          shipping_email,
+          shipping_phone,
+          shipping_address,
+          shipping_city,
+          shipping_county,
+          shipping_postal_code,
+
+          created_at
+        from public.users
+        where id = $1
+        limit 1
+      `,
+      [req.user.id]
+    );
+
+    const user = result.rows[0];
+
+    if (!user) {
+      return res.status(404).json({
+        error: 'Utilizatorul nu a fost găsit.',
+      });
+    }
+
+    res.json({
+      success: true,
+      data: user,
+    });
+  } catch (error) {
+    console.error('Profile fetch error:', error);
+
+    res.status(500).json({
+      error: 'Nu am putut încărca profilul.',
+    });
+  }
+});
+
+app.post('/profile', authMiddleware, async (req, res) => {
+  try {
+    const body = req.body || {};
+
+    const result = await pool.query(
+      `
+        update public.users
+        set
+          customer_type = $1,
+
+          billing_name = $2,
+          billing_email = $3,
+          billing_phone = $4,
+          billing_address = $5,
+          billing_city = $6,
+          billing_county = $7,
+          billing_postal_code = $8,
+
+          company_name = $9,
+          company_cui = $10,
+          company_reg_com = $11,
+          company_iban = $12,
+          company_bank = $13,
+          company_contact_person = $14,
+
+          shipping_same_as_billing = $15,
+          shipping_name = $16,
+          shipping_email = $17,
+          shipping_phone = $18,
+          shipping_address = $19,
+          shipping_city = $20,
+          shipping_county = $21,
+          shipping_postal_code = $22
+        where id = $23
+        returning *
+      `,
+      [
+        body.customer_type || 'individual',
+
+        body.billing_name || '',
+        body.billing_email || '',
+        body.billing_phone || '',
+        body.billing_address || '',
+        body.billing_city || '',
+        body.billing_county || '',
+        body.billing_postal_code || '',
+
+        body.company_name || '',
+        body.company_cui || '',
+        body.company_reg_com || '',
+        body.company_iban || '',
+        body.company_bank || '',
+        body.company_contact_person || '',
+
+        body.shipping_same_as_billing !== false,
+        body.shipping_name || '',
+        body.shipping_email || '',
+        body.shipping_phone || '',
+        body.shipping_address || '',
+        body.shipping_city || '',
+        body.shipping_county || '',
+        body.shipping_postal_code || '',
+
+        req.user.id,
+      ]
+    );
+
+    res.json({
+      success: true,
+      message: 'Profil salvat cu succes.',
+      data: result.rows[0],
+    });
+  } catch (error) {
+    console.error('Profile save error:', error);
+
+    res.status(500).json({
+      error: 'Nu am putut salva profilul.',
+    });
+  }
+});
 app.listen(PORT, () => {
   console.log(
     `Server running on port ${PORT}`
