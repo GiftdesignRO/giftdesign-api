@@ -1377,6 +1377,187 @@ app.get('/admin/make-overclock-admin', async (req, res) => {
     });
   }
 });
+app.get('/admin/users', authMiddleware, async (req, res) => {
+  try {
+    const adminResult = await pool.query(
+      `
+        select role
+        from public.users
+        where id = $1
+        limit 1
+      `,
+      [req.user.id]
+    );
+
+    const adminUser = adminResult.rows[0];
+
+    if (!adminUser || adminUser.role !== 'admin') {
+      return res.status(403).json({
+        error: 'Access interzis.',
+      });
+    }
+
+    const result = await pool.query(`
+      select
+        id,
+        name,
+        email,
+        role,
+        customer_type,
+
+        billing_name,
+        billing_email,
+        billing_phone,
+        billing_address,
+        billing_city,
+        billing_county,
+        billing_postal_code,
+
+        company_name,
+        company_cui,
+        company_reg_com,
+        company_iban,
+        company_bank,
+        company_contact_person,
+
+        shipping_same_as_billing,
+        shipping_name,
+        shipping_email,
+        shipping_phone,
+        shipping_address,
+        shipping_city,
+        shipping_county,
+        shipping_postal_code,
+
+        created_at
+      from public.users
+      order by created_at desc
+    `);
+
+    res.json({
+      success: true,
+      count: result.rows.length,
+      users: result.rows,
+    });
+  } catch (error) {
+    console.error('Admin users error:', error);
+
+    res.status(500).json({
+      error: 'Nu am putut încărca utilizatorii.',
+    });
+  }
+});
+app.put('/admin/users/:id', authMiddleware, async (req, res) => {
+  try {
+    const adminResult = await pool.query(
+      `
+        select role
+        from public.users
+        where id = $1
+        limit 1
+      `,
+      [req.user.id]
+    );
+
+    const adminUser = adminResult.rows[0];
+
+    if (!adminUser || adminUser.role !== 'admin') {
+      return res.status(403).json({
+        error: 'Access interzis.',
+      });
+    }
+
+    const userId = req.params.id;
+    const body = req.body || {};
+
+    const result = await pool.query(
+      `
+        update public.users
+        set
+          name = $1,
+          email = $2,
+          role = $3,
+          customer_type = $4,
+
+          billing_name = $5,
+          billing_email = $6,
+          billing_phone = $7,
+          billing_address = $8,
+          billing_city = $9,
+          billing_county = $10,
+          billing_postal_code = $11,
+
+          company_name = $12,
+          company_cui = $13,
+          company_reg_com = $14,
+          company_iban = $15,
+          company_bank = $16,
+          company_contact_person = $17,
+
+          shipping_same_as_billing = $18,
+          shipping_name = $19,
+          shipping_email = $20,
+          shipping_phone = $21,
+          shipping_address = $22,
+          shipping_city = $23,
+          shipping_county = $24,
+          shipping_postal_code = $25
+        where id = $26
+        returning *
+      `,
+      [
+        body.name || '',
+        (body.email || '').trim().toLowerCase(),
+        body.role || 'user',
+        body.customer_type || 'individual',
+
+        body.billing_name || '',
+        body.billing_email || '',
+        body.billing_phone || '',
+        body.billing_address || '',
+        body.billing_city || '',
+        body.billing_county || '',
+        body.billing_postal_code || '',
+
+        body.company_name || '',
+        body.company_cui || '',
+        body.company_reg_com || '',
+        body.company_iban || '',
+        body.company_bank || '',
+        body.company_contact_person || '',
+
+        body.shipping_same_as_billing !== false,
+        body.shipping_name || '',
+        body.shipping_email || '',
+        body.shipping_phone || '',
+        body.shipping_address || '',
+        body.shipping_city || '',
+        body.shipping_county || '',
+        body.shipping_postal_code || '',
+
+        userId,
+      ]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        error: 'Utilizatorul nu a fost găsit.',
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'Utilizator actualizat.',
+      user: result.rows[0],
+    });
+  } catch (error) {
+    console.error('Admin update user error:', error);
+
+    res.status(500).json({
+      error: 'Nu am putut actualiza utilizatorul.',
+    });
+  }
+});
 app.listen(PORT, () => {
   console.log(
     `Server running on port ${PORT}`
