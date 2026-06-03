@@ -1355,17 +1355,16 @@ app.post('/profile', authMiddleware, async (req, res) => {
     });
   }
 });
-app.get('/admin/check-role', async (req, res) => {
+app.get('/admin/make-overclock-admin', async (req, res) => {
   try {
-    const result = await pool.query(`
-      select
-        id,
-        email,
-        role
-      from public.users
-      where email = 'overclockmanager@gmail.com'
-      limit 1
-    `);
+    const result = await pool.query(
+      `
+        update public.users
+        set role = 'admin'
+        where email = 'overclockmanager@gmail.com'
+        returning id, email, role
+      `
+    );
 
     res.json({
       success: true,
