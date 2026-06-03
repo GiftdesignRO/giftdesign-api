@@ -743,13 +743,6 @@ app.post('/reset-password', async (req, res) => {
     });
   }
 });
-app.post('/forgot-password', async (req, res) => {
-  ...
-});
-
-app.post('/reset-password', async (req, res) => {
-  ...
-});
 
 app.get('/reset-password-page', (req, res) => {
   res.send(`
