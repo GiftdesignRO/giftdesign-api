@@ -687,6 +687,62 @@ app.post('/forgot-password', async (req, res) => {
     });
   }
 });
+app.post('/reset-password', async (req, res) => {
+  try {
+    const { token, password } = req.body;
+
+    if (!token || !password) {
+      return res.status(400).json({
+        error: 'Token și parola sunt obligatorii.',
+      });
+    }
+
+    const result = await pool.query(
+      `
+      select id
+      from public.users
+      where reset_token = $1
+      and reset_token_expires > now()
+      limit 1
+      `,
+      [token]
+    );
+
+    const user = result.rows[0];
+
+    if (!user) {
+      return res.status(400).json({
+        error: 'Link invalid sau expirat.',
+      });
+    }
+
+    const passwordHash = hashPassword(password);
+
+    await pool.query(
+      `
+      update public.users
+      set
+        password_hash = $1,
+        reset_token = null,
+        reset_token_expires = null
+      where id = $2
+      `,
+      [passwordHash, user.id]
+    );
+
+    res.json({
+      success: true,
+      message: 'Parola a fost actualizată.',
+    });
+
+  } catch (error) {
+    console.error('Reset password error:', error);
+
+    res.status(500).json({
+      error: 'Nu am putut reseta parola.',
+    });
+  }
+});
 app.post(
   '/orders',
   authMiddleware,
