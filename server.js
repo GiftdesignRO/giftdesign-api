@@ -1355,26 +1355,23 @@ app.post('/profile', authMiddleware, async (req, res) => {
     });
   }
 });
-app.get('/admin/add-role-column', async (req, res) => {
+app.get('/admin/check-role', async (req, res) => {
   try {
-    await pool.query(`
-      ALTER TABLE public.users
-      ADD COLUMN IF NOT EXISTS role TEXT DEFAULT 'user'
-    `);
-
-    await pool.query(`
-      UPDATE public.users
-      SET role = 'admin'
-      WHERE email = 'overclockmanager@gmail.com'
+    const result = await pool.query(`
+      select
+        id,
+        email,
+        role
+      from public.users
+      where email = 'overclockmanager@gmail.com'
+      limit 1
     `);
 
     res.json({
       success: true,
-      message: 'Coloana role a fost adăugată și adminul a fost setat.',
+      user: result.rows[0] || null,
     });
   } catch (error) {
-    console.error('Add role column error:', error);
-
     res.status(500).json({
       success: false,
       error: error.message,
