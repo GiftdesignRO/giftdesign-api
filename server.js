@@ -595,6 +595,98 @@ const password =
   }
 });
 
+
+app.post('/forgot-password', async (req, res) => {
+  try {
+    const body = req.body || {};
+
+    const email = (body.email || '').trim().toLowerCase();
+
+    if (!email) {
+      return res.status(400).json({
+        error: 'Emailul este obligatoriu.',
+      });
+    }
+
+    const result = await pool.query(
+      `
+        select id, name, email
+        from public.users
+        where email = $1
+        limit 1
+      `,
+      [email]
+    );
+
+    const user = result.rows[0];
+
+    if (!user) {
+      return res.json({
+        success: true,
+        message: 'Dacă emailul există, vei primi un link de resetare.',
+      });
+    }
+
+    const resetToken = crypto.randomBytes(32).toString('hex');
+    const resetTokenExpires = new Date(Date.now() + 60 * 60 * 1000);
+
+    await pool.query(
+      `
+        update public.users
+        set reset_token = $1,
+            reset_token_expires = $2
+        where id = $3
+      `,
+      [resetToken, resetTokenExpires, user.id]
+    );
+
+    const resetLink =
+      `${process.env.APP_URL || 'https://giftdesign.ro'}/reset-password?token=${resetToken}`;
+
+    await axios.post(
+      'https://api.brevo.com/v3/smtp/email',
+      {
+        sender: {
+          name: process.env.SMTP_FROM_NAME || 'GiftDesign',
+          email: process.env.SMTP_FROM_EMAIL || 'info@giftdesign.ro',
+        },
+        to: [
+          {
+            email: user.email,
+            name: user.name || 'GiftDesign user',
+          },
+        ],
+        subject: 'Resetare parolă GiftDesign',
+        htmlContent: `
+          <h2>Resetare parolă GiftDesign</h2>
+          <p>Ai cerut resetarea parolei pentru contul tău.</p>
+          <p>Apasă pe linkul de mai jos pentru a seta o parolă nouă:</p>
+          <p><a href="${resetLink}">${resetLink}</a></p>
+          <p>Linkul expiră în 60 de minute.</p>
+          <p>Dacă nu ai cerut resetarea parolei, poți ignora acest email.</p>
+        `,
+      },
+      {
+        headers: {
+          accept: 'application/json',
+          'api-key': process.env.BREVO_API_KEY,
+          'content-type': 'application/json',
+        },
+      }
+    );
+
+    res.json({
+      success: true,
+      message: 'Dacă emailul există, vei primi un link de resetare.',
+    });
+  } catch (error) {
+    console.error('Forgot password error:', error);
+
+    res.status(500).json({
+      error: 'Nu am putut trimite emailul de resetare.',
+    });
+  }
+});
 app.post(
   '/orders',
   authMiddleware,
