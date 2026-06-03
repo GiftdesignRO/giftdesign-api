@@ -641,7 +641,7 @@ app.post('/forgot-password', async (req, res) => {
     );
 
     const resetLink =
-      `${process.env.APP_URL || 'https://giftdesign.ro'}/reset-password?token=${resetToken}`;
+  `${process.env.API_URL || 'https://giftdesign-api.onrender.com'}/reset-password-page?token=${resetToken}`;
 
     await axios.post(
       'https://api.brevo.com/v3/smtp/email',
@@ -742,6 +742,97 @@ app.post('/reset-password', async (req, res) => {
       error: 'Nu am putut reseta parola.',
     });
   }
+});
+app.post('/forgot-password', async (req, res) => {
+  ...
+});
+
+app.post('/reset-password', async (req, res) => {
+  ...
+});
+
+app.get('/reset-password-page', (req, res) => {
+  res.send(`
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Resetare parolă GiftDesign</title>
+</head>
+<body style="font-family:Arial;padding:40px;max-width:500px;margin:auto;">
+<h2>Resetare parolă GiftDesign</h2>
+
+<form id="form">
+  <input
+    type="password"
+    id="password"
+    placeholder="Parolă nouă"
+    style="width:100%;padding:12px;margin-bottom:10px;"
+    required
+  />
+
+  <input
+    type="password"
+    id="confirmPassword"
+    placeholder="Confirmă parola"
+    style="width:100%;padding:12px;margin-bottom:10px;"
+    required
+  />
+
+  <button
+    type="submit"
+    style="padding:12px 20px;"
+  >
+    Resetează parola
+  </button>
+</form>
+
+<div id="message" style="margin-top:20px;"></div>
+
+<script>
+const token =
+  new URLSearchParams(window.location.search)
+    .get('token');
+
+document
+  .getElementById('form')
+  .addEventListener('submit', async (e) => {
+
+    e.preventDefault();
+
+    const password =
+      document.getElementById('password').value;
+
+    const confirmPassword =
+      document.getElementById('confirmPassword').value;
+
+    if (password !== confirmPassword) {
+      document.getElementById('message').innerText =
+        'Parolele nu coincid.';
+      return;
+    }
+
+    const response = await fetch('/reset-password', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        token,
+        password
+      })
+    });
+
+    const data = await response.json();
+
+    document.getElementById('message').innerText =
+      data.message || data.error;
+});
+</script>
+
+</body>
+</html>
+  `);
 });
 app.post(
   '/orders',
