@@ -100,6 +100,7 @@ function publicUser(user) {
     name: user.name,
     email: user.email,
     created_at: user.created_at,
+    role: user.role || 'user',
   };
 }
 
@@ -554,12 +555,13 @@ const password =
     const result = await pool.query(
       `
         select
-          id,
-          name,
-          email,
-          password_hash,
-          created_at
-        from public.users
+      id,
+      name,
+      email,
+      password_hash,
+      role,
+  created_at
+from public.users
         where email = $1
         limit 1
       `,
@@ -1089,14 +1091,23 @@ app.get(
   authMiddleware,
   async (req, res) => {
     try {
-      if (
-        req.user.email !==
-        'overclockmanager@gmail.com'
-      ) {
-        return res.status(403).json({
-          error: 'Access interzis.',
-        });
-      }
+      const userResult = await pool.query(
+  `
+    select role
+    from public.users
+    where id = $1
+    limit 1
+  `,
+  [req.user.id]
+);
+
+const currentUser = userResult.rows[0];
+
+if (!currentUser || currentUser.role !== 'admin') {
+  return res.status(403).json({
+    error: 'Access interzis.',
+  });
+}
 
       const result = await pool.query(
         `
