@@ -1365,7 +1365,7 @@ app.get('/admin/add-role-column', async (req, res) => {
     await pool.query(`
       UPDATE public.users
       SET role = 'admin'
-      WHERE email = 'info@giftdesign.ro'
+      WHERE email = 'overclockmanager@gmail.com'
     `);
 
     res.json({
