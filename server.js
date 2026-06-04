@@ -1195,7 +1195,10 @@ if (!currentUser || currentUser.role !== 'admin') {
             merchantpro_response,
             merchantpro_order_id,
             status,
-            created_at
+          cancel_reason,
+          cancelled_at,
+          cancelled_by,
+          created_at
           from public.orders
           order by created_at desc
         `
