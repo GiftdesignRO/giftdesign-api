@@ -1086,6 +1086,48 @@ app.get(
   }
 );
 
+app.put(
+  '/orders/:id/cancel',
+  authMiddleware,
+  async (req, res) => {
+    try {
+      const orderId = req.params.id;
+
+      const result = await pool.query(
+        `
+          update public.orders
+          set status = 'Anulată'
+          where id = $1
+          and user_id = $2
+          and status not in ('Anulată', 'Livrată', 'Expediată')
+          returning
+            id,
+            order_number,
+            status
+        `,
+        [orderId, req.user.id]
+      );
+
+      if (result.rows.length === 0) {
+        return res.status(400).json({
+          error: 'Comanda nu poate fi anulată.',
+        });
+      }
+
+      res.json({
+        success: true,
+        message: 'Comanda a fost anulată.',
+        order: result.rows[0],
+      });
+    } catch (error) {
+      console.error('Cancel order error:', error);
+
+      res.status(500).json({
+        error: 'Nu am putut anula comanda.',
+      });
+    }
+  }
+);
 app.get(
   '/admin/orders',
   authMiddleware,
