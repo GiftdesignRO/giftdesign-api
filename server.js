@@ -1093,37 +1093,67 @@ app.put(
     try {
       const orderId = req.params.id;
 
+      const {
+        reason,
+        custom_reason,
+      } = req.body || {};
+
+      const finalReason =
+        reason === 'Alt motiv'
+          ? (custom_reason || '').trim()
+          : (reason || '').trim();
+
       const result = await pool.query(
         `
           update public.orders
-          set status = 'Anulată'
+          set
+            status = 'Anulată',
+            cancel_reason = $3,
+            cancelled_at = now(),
+            cancelled_by = 'client'
           where id = $1
           and user_id = $2
-          and status not in ('Anulată', 'Livrată', 'Expediată')
+          and status not in (
+            'Anulată',
+            'Livrată',
+            'Expediată'
+          )
           returning
             id,
             order_number,
-            status
+            status,
+            cancel_reason,
+            cancelled_at
         `,
-        [orderId, req.user.id]
+        [
+          orderId,
+          req.user.id,
+          finalReason,
+        ]
       );
 
       if (result.rows.length === 0) {
         return res.status(400).json({
-          error: 'Comanda nu poate fi anulată.',
+          error:
+            'Comanda nu poate fi anulată.',
         });
       }
 
       res.json({
         success: true,
-        message: 'Comanda a fost anulată.',
+        message:
+          'Comanda a fost anulată.',
         order: result.rows[0],
       });
     } catch (error) {
-      console.error('Cancel order error:', error);
+      console.error(
+        'Cancel order error:',
+        error
+      );
 
       res.status(500).json({
-        error: 'Nu am putut anula comanda.',
+        error:
+          'Nu am putut anula comanda.',
       });
     }
   }
