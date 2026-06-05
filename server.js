@@ -1103,7 +1103,35 @@ app.put(
         reason === 'Alt motiv'
           ? (custom_reason || '').trim()
           : (reason || '').trim();
+      const orderResult = await pool.query(
+  `
+    select
+      merchantpro_order_id
+    from public.orders
+    where id = $1
+    and user_id = $2
+    limit 1
+  `,
+  [orderId, req.user.id]
+);
 
+const order = orderResult.rows[0];
+
+if (!order) {
+  return res.status(404).json({
+    error: 'Comanda nu există.',
+  });
+}
+
+if (!order.merchantpro_order_id) {
+  return res.status(400).json({
+    error: 'Comanda nu are ID MerchantPro.',
+  });
+}
+
+await api.patch(
+  `/api/v2/orders/${order.merchantpro_order_id}/cancelled`
+);
       const result = await pool.query(
         `
           update public.orders
