@@ -1421,15 +1421,26 @@ app.post(
           continue;
         }
 
-        const customer = {
-          name: mpOrder.customer_name || '',
-          email: mpOrder.customer_email || '',
-          phone: mpOrder.customer_phone || '',
-          address: mpOrder.shipping_full_address || '',
-          city: mpOrder.shipping_city || '',
-          county: mpOrder.shipping_state || '',
-          country: mpOrder.shipping_country_name || 'România',
-        };
+        const customerName =
+  `${mpOrder.billing_first_name || mpOrder.shipping_first_name || ''} ${
+    mpOrder.billing_last_name || mpOrder.shipping_last_name || ''
+  }`.trim();
+
+const customer = {
+  name: customerName || mpOrder.customer_name || '',
+  email: mpOrder.customer_email || '',
+  phone: mpOrder.billing_phone || mpOrder.shipping_phone || mpOrder.customer_phone || '',
+  address:
+    mpOrder.billing_full_address ||
+    mpOrder.shipping_full_address ||
+    '',
+  city: mpOrder.billing_city || mpOrder.shipping_city || '',
+  county: mpOrder.billing_state || mpOrder.shipping_state || '',
+  country:
+    mpOrder.billing_country_name ||
+    mpOrder.shipping_country_name ||
+    'România',
+};
 
         const items = Array.isArray(mpOrder.products)
           ? mpOrder.products.map((item) => ({
