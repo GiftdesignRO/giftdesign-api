@@ -1347,6 +1347,27 @@ app.put(
     }
   }
 );
+app.get(
+  '/admin/merchantpro/orders-test',
+  authMiddleware,
+  async (req, res) => {
+    try {
+      const response = await api.get('/api/v2/orders');
+
+      res.json(response.data);
+    } catch (error) {
+      console.error(
+        'MerchantPro test error:',
+        error.response?.data || error.message
+      );
+
+      res.status(500).json({
+        error: 'MerchantPro orders test failed',
+        details: error.response?.data || error.message,
+      });
+    }
+  }
+);
 app.get('/test-email', async (req, res) => {
   try {
     await axios.post(
