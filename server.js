@@ -1398,6 +1398,23 @@ app.post(
   },
 });
 
+const orders = response.data?.data || [];
+
+res.json({
+  count: response.data?.count,
+  returned: orders.length,
+  first: orders[0],
+  last: orders[orders.length - 1],
+  ids: orders.map((order) => ({
+    id: order.id,
+    date_created: order.date_created,
+    customer_email: order.customer_email,
+    billing_first_name: order.billing_first_name,
+    billing_last_name: order.billing_last_name,
+    total_amount: order.total_amount,
+  })),
+});
+
       const merchantOrders = response.data?.data || [];
 
       let imported = 0;
