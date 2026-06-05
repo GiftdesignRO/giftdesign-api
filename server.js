@@ -1218,6 +1218,106 @@ if (!currentUser || currentUser.role !== 'admin') {
     }
   }
 );
+app.put(
+  '/admin/orders/:id/status',
+  authMiddleware,
+  async (req, res) => {
+    try {
+      const adminResult = await pool.query(
+        `
+          select role
+          from public.users
+          where id = $1
+          limit 1
+        `,
+        [req.user.id]
+      );
+
+      const adminUser = adminResult.rows[0];
+
+      if (!adminUser || adminUser.role !== 'admin') {
+        return res.status(403).json({
+          error: 'Access interzis.',
+        });
+      }
+
+      const orderId = req.params.id;
+      const status = (req.body?.status || '').trim();
+
+      const handlers = {
+        'Procesare': 'in_process',
+        'Expediată': 'shipped',
+        'Livrată': 'delivered',
+        'Anulată': 'cancelled',
+      };
+
+      if (!handlers[status]) {
+        return res.status(400).json({
+          error: 'Status invalid pentru MerchantPro.',
+        });
+      }
+
+      const orderResult = await pool.query(
+        `
+          select
+            id,
+            merchantpro_order_id
+          from public.orders
+          where id = $1
+          limit 1
+        `,
+        [orderId]
+      );
+
+      const order = orderResult.rows[0];
+
+      if (!order) {
+        return res.status(404).json({
+          error: 'Comanda nu există.',
+        });
+      }
+
+      if (!order.merchantpro_order_id) {
+        return res.status(400).json({
+          error: 'Comanda nu are ID MerchantPro.',
+        });
+      }
+
+      await api.patch(
+        `/api/v2/orders/${order.merchantpro_order_id}/${handlers[status]}`
+      );
+
+      const updateResult = await pool.query(
+        `
+          update public.orders
+          set
+            status = $1,
+            cancelled_at = case when $1 = 'Anulată' then now() else cancelled_at end,
+            cancelled_by = case when $1 = 'Anulată' then 'admin' else cancelled_by end,
+            cancel_reason = case when $1 = 'Anulată' then coalesce(cancel_reason, 'Anulată din Admin') else cancel_reason end
+          where id = $2
+          returning *
+        `,
+        [status, orderId]
+      );
+
+      res.json({
+        success: true,
+        message: 'Status comandă actualizat.',
+        order: updateResult.rows[0],
+      });
+    } catch (error) {
+      console.error(
+        'Admin update order status error:',
+        error.response?.data || error.message
+      );
+
+      res.status(500).json({
+        error: 'Nu am putut actualiza statusul comenzii.',
+      });
+    }
+  }
+);
 app.get('/test-email', async (req, res) => {
   try {
     await axios.post(
