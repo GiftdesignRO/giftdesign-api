@@ -883,6 +883,14 @@ app.post(
           },
         };
       });
+      const countResult = await pool.query(
+  'select count(*)::int as count from public.orders'
+);
+
+const orderNumber =
+  `GD-${String(
+    countResult.rows[0].count + 1
+  ).padStart(6, '0')}`;
 
       const paymentMethodCode =
         payment_method === 'Card online'
@@ -902,7 +910,7 @@ app.post(
         customer_email: customer.email,
         customer_device: 'mobile',
         customer_note:
-          `Comandă din aplicația mobilă GiftDesign. ` +
+          `Comandă GiftDesign ${orderNumber}. ` +
           `Livrare: ${delivery_method}. Plată: ${payment_method}.`,
 
         billing_type: 'individual',
@@ -947,14 +955,7 @@ app.post(
         mpResponse.data
       );
 
-      const countResult = await pool.query(
-        'select count(*)::int as count from public.orders'
-      );
-
-      const orderNumber =
-        `GD-${String(
-          countResult.rows[0].count + 1
-        ).padStart(6, '0')}`;
+      
 
       const orderId = crypto.randomUUID();
 
