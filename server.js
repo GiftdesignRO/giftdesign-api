@@ -1391,7 +1391,12 @@ app.post(
         });
       }
 
-      const response = await api.get('/api/v2/orders');
+      const response = await api.get('/api/v2/orders', {
+  params: {
+    page: 1,
+    limit: 100,
+  },
+});
 
       const merchantOrders = response.data?.data || [];
 
