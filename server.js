@@ -1349,7 +1349,8 @@ app.put(
 );
 app.get(
   '/admin/merchantpro/orders-test',
-    async (req, res) => {
+  authMiddleware,
+  async (req, res) => {
     try {
       const response = await api.get('/api/v2/orders');
 
@@ -1362,6 +1363,144 @@ app.get(
 
       res.status(500).json({
         error: 'MerchantPro orders test failed',
+        details: error.response?.data || error.message,
+      });
+    }
+  }
+);
+app.post(
+  '/admin/orders/sync-merchantpro',
+  authMiddleware,
+  async (req, res) => {
+    try {
+      const adminResult = await pool.query(
+        `
+        select role
+        from public.users
+        where id = $1
+        limit 1
+        `,
+        [req.user.id]
+      );
+
+      const adminUser = adminResult.rows[0];
+
+      if (!adminUser || adminUser.role !== 'admin') {
+        return res.status(403).json({
+          error: 'Access interzis.',
+        });
+      }
+
+      const response = await api.get('/api/v2/orders');
+
+      const merchantOrders = response.data?.data || [];
+
+      let imported = 0;
+      let skipped = 0;
+
+      for (const mpOrder of merchantOrders) {
+        const merchantOrderId = String(mpOrder.id || '').trim();
+
+        if (!merchantOrderId) {
+          skipped++;
+          continue;
+        }
+
+        const existsResult = await pool.query(
+          `
+          select id
+          from public.orders
+          where merchantpro_order_id = $1
+          limit 1
+          `,
+          [merchantOrderId]
+        );
+
+        if (existsResult.rows.length > 0) {
+          skipped++;
+          continue;
+        }
+
+        const customer = {
+          name: mpOrder.customer_name || '',
+          email: mpOrder.customer_email || '',
+          phone: mpOrder.customer_phone || '',
+          address: mpOrder.shipping_full_address || '',
+          city: mpOrder.shipping_city || '',
+          county: mpOrder.shipping_state || '',
+          country: mpOrder.shipping_country_name || 'România',
+        };
+
+        const items = Array.isArray(mpOrder.products)
+          ? mpOrder.products.map((item) => ({
+              title: item.name || '',
+              sku: item.sku || '',
+              quantity: Number(item.quantity || 1),
+              price: Number(item.price || 0),
+            }))
+          : [];
+
+        await pool.query(
+          `
+          insert into public.orders (
+            id,
+            order_number,
+            user_id,
+            customer,
+            items,
+            total,
+            delivery_method,
+            payment_method,
+            merchantpro_response,
+            merchantpro_order_id,
+            status,
+            created_at
+          )
+          values (
+            gen_random_uuid(),
+            $1,
+            null,
+            $2,
+            $3,
+            $4,
+            $5,
+            $6,
+            $7,
+            $8,
+            $9,
+            $10
+          )
+          `,
+          [
+            String(mpOrder.id),
+            customer,
+            JSON.stringify(items),
+            Number(mpOrder.total_amount || 0),
+            mpOrder.shipping_method_name || '',
+            mpOrder.payment_method_name || '',
+            mpOrder,
+            merchantOrderId,
+            mpOrder.cancelled ? 'Anulată' : 'Procesare',
+            mpOrder.date_created || new Date(),
+          ]
+        );
+
+        imported++;
+      }
+
+      res.json({
+        imported,
+        skipped,
+        total: merchantOrders.length,
+      });
+    } catch (error) {
+      console.error(
+        'MerchantPro sync error:',
+        error.response?.data || error.message
+      );
+
+      res.status(500).json({
+        error: 'MerchantPro sync failed',
         details: error.response?.data || error.message,
       });
     }
