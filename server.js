@@ -1416,20 +1416,7 @@ for (const start of startPoints) {
   merchantOrders.push(...(pageResponse.data?.data || []));
 }
 
-      console.log(
-  'MerchantPro response keys:',
-  Object.keys(response.data || {})
-);
-
-console.log(
-  'MerchantPro META:',
-  JSON.stringify(response.data?.meta, null, 2)
-);
-
-console.log(
-  'MerchantPro COUNT:',
-  response.data?.data?.length
-);
+      
 
       let imported = 0;
       let skipped = 0;
