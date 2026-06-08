@@ -1412,6 +1412,17 @@ res.json({
 
       const merchantOrders = response.data?.data || [];
 
+      console.log(
+  'MerchantPro sync debug:',
+  merchantOrders.length,
+  merchantOrders.slice(0, 3).map((order) => ({
+    id: order.id,
+    date_created: order.date_created,
+    billing_name: order.billing_name,
+    customer_email: order.customer_email,
+  }))
+);
+
       let imported = 0;
       let skipped = 0;
 
