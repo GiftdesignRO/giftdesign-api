@@ -1391,24 +1391,19 @@ app.post(
         });
       }
 
-      const response = await api.get('/api/v2/orders', {
-  params: {
-    page: 2,
-  },
-});
+      const response = await api.get('/api/v2/orders');
 
 
       const merchantOrders = response.data?.data || [];
 
       console.log(
-  'MerchantPro sync debug:',
-  merchantOrders.length,
-  merchantOrders.slice(0, 3).map((order) => ({
-    id: order.id,
-    date_created: order.date_created,
-    billing_name: order.billing_name,
-    customer_email: order.customer_email,
-  }))
+  'MerchantPro response keys:',
+  Object.keys(response.data || {})
+);
+
+console.log(
+  'MerchantPro response:',
+  JSON.stringify(response.data, null, 2).substring(0, 3000)
 );
 
       let imported = 0;
