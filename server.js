@@ -1402,8 +1402,13 @@ app.post(
 );
 
 console.log(
-  'MerchantPro response:',
-  JSON.stringify(response.data, null, 2).substring(0, 3000)
+  'MerchantPro META:',
+  JSON.stringify(response.data?.meta, null, 2)
+);
+
+console.log(
+  'MerchantPro COUNT:',
+  response.data?.data?.length
 );
 
       let imported = 0;
