@@ -1391,14 +1391,30 @@ app.post(
         });
       }
 
-      const response = await api.get('/api/v2/orders', {
-  params: {
-    start: 7880,
-  },
-});
+      const firstResponse = await api.get('/api/v2/orders');
 
+const totalOrders = Number(firstResponse.data?.meta?.count?.total || 0);
+const limit = Number(firstResponse.data?.meta?.count?.limit || 20);
 
-      const merchantOrders = response.data?.data || [];
+const startPoints = [];
+
+for (
+  let start = Math.max(totalOrders - limit, 0);
+  start >= Math.max(totalOrders - 200, 0);
+  start -= limit
+) {
+  startPoints.push(start);
+}
+
+const merchantOrders = [];
+
+for (const start of startPoints) {
+  const pageResponse = await api.get('/api/v2/orders', {
+    params: { start },
+  });
+
+  merchantOrders.push(...(pageResponse.data?.data || []));
+}
 
       console.log(
   'MerchantPro response keys:',
@@ -1447,19 +1463,18 @@ console.log(
   }`.trim();
 
 const customer = {
-  name: customerName || mpOrder.customer_name || '',
-  email: mpOrder.customer_email || '',
-  phone: mpOrder.billing_phone || mpOrder.shipping_phone || mpOrder.customer_phone || '',
-  address:
-    mpOrder.billing_full_address ||
-    mpOrder.shipping_full_address ||
+  name:
+    mpOrder.billing_name ||
+    mpOrder.shipping_name ||
+    customerName ||
+    mpOrder.customer_name ||
     '',
-  city: mpOrder.billing_city || mpOrder.shipping_city || '',
-  county: mpOrder.billing_state || mpOrder.shipping_state || '',
-  country:
-    mpOrder.billing_country_name ||
-    mpOrder.shipping_country_name ||
-    'România',
+  email: mpOrder.customer_email || '',
+  phone: mpOrder.shipping_phone || mpOrder.customer_phone || '',
+  address: mpOrder.shipping_full_address || '',
+  city: mpOrder.shipping_city || '',
+  county: mpOrder.shipping_state || '',
+  country: mpOrder.shipping_country_name || 'România',
 };
 
         const items = Array.isArray(mpOrder.products)
