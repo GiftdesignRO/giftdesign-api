@@ -1391,12 +1391,7 @@ app.post(
         });
       }
 
-      const response = await api.get('/api/v2/orders', {
-  params: {
-  date_from: '2026-06-01',
-  date_to: '2026-06-30',
-},
-});
+      const response = await api.get('/api/v2/orders');
 
 const orders = response.data?.data || [];
 
