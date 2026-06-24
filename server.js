@@ -113,7 +113,7 @@ const api = axios.create({
 });
 app.get('/admin/payment-methods-test', async (req, res) => {
   try {
-    const response = await api.get('/api/v2/payments');
+    const response = await api.get('/api/v2/payment_methods');
 
     console.log(
       'PAYMENT METHODS:',
