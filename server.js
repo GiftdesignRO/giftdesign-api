@@ -1379,7 +1379,7 @@ app.get(
   authMiddleware,
   async (req, res) => {
     try {
-      const response = await api.get('/api/v2/orders');
+      const response = await api.get('/api/v2/orders/93283017');
 
       res.json(response.data);
     } catch (error) {
