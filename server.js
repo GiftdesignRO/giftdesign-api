@@ -111,7 +111,7 @@ const api = axios.create({
     password: process.env.MERCHANTPRO_API_SECRET,
   },
 });
-app.get('/admin/payment-methods-test', authMiddleware, async (req, res) => {
+app.get('/admin/payment-methods-test', async (req, res) => {
   try {
     const response = await api.get('/api/v2/payment-methods');
 
