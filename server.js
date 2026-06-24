@@ -894,7 +894,7 @@ const orderNumber =
 
       const paymentMethodCode =
         payment_method === 'Card online'
-          ? 'euplatesc'
+          ? 'euplatescro'
           : 'cash_delivery';
        const shippingAmount =
         delivery_method === 'Curier rapid' && Number(total || 0) < 400
