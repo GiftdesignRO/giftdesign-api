@@ -111,7 +111,27 @@ const api = axios.create({
     password: process.env.MERCHANTPRO_API_SECRET,
   },
 });
+app.get('/admin/payment-methods-test', authMiddleware, async (req, res) => {
+  try {
+    const response = await api.get('/api/v2/payment-methods');
 
+    console.log(
+      'PAYMENT METHODS:',
+      JSON.stringify(response.data, null, 2)
+    );
+
+    res.json(response.data);
+  } catch (error) {
+    console.log(
+      'PAYMENT METHODS ERROR:',
+      error.response?.data || error.message
+    );
+
+    res.status(500).json({
+      error: error.response?.data || error.message,
+    });
+  }
+});
 const smtpPort = Number(process.env.SMTP_PORT || 587);
 
 const transporter = nodemailer.createTransport({
