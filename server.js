@@ -893,9 +893,9 @@ const orderNumber =
   ).padStart(6, '0')}`;
 
       const paymentMethodCode =
-        payment_method === 'Card online'
-          ? 'euplatescro'
-          : 'cash_delivery';
+  payment_method === 'Card online'
+    ? 'Plată online - EuPlatesc.ro'
+    : 'cash_delivery';
        const shippingAmount =
         delivery_method === 'Curier rapid' && Number(total || 0) < 400
          ? 24.9
