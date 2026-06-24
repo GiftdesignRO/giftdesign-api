@@ -902,7 +902,6 @@ const orderNumber =
          : 0;
       const merchantPayload = {
         payment_status: 'awaiting',
-        payment_method_code: [paymentMethodCode],
         shipping_status: 'awaiting',
         shipping_method_id: 0,
         shipping_amount: shippingAmount,
