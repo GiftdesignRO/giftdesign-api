@@ -1027,14 +1027,22 @@ const orderNumber =
         'ORDER ERROR FULL:'
       );
 
-      console.log({
-        status:
-          error.response?.status,
-        data:
-          error.response?.data,
-        message:
-          error.message,
-      });
+      console.log(
+  JSON.stringify(
+    {
+      status:
+        error.response?.status,
+      headers:
+        error.response?.headers,
+      data:
+        error.response?.data,
+      message:
+        error.message,
+    },
+    null,
+    2
+  )
+);
 
       res.status(500).json({
         error:
