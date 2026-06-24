@@ -1376,8 +1376,7 @@ app.put(
 );
 app.get(
   '/admin/merchantpro/orders-test',
-  authMiddleware,
-  async (req, res) => {
+    async (req, res) => {
     try {
       const response = await api.get('/api/v2/orders/93283017');
 
