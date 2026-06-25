@@ -914,7 +914,7 @@ const orderNumber =
 
       const paymentMethodCode =
   payment_method === 'Card online'
-    ? 'Plată online - EuPlatesc.ro'
+    ? 'euplatesc'
     : 'cash_delivery';
        const shippingAmount =
         delivery_method === 'Curier rapid' && Number(total || 0) < 400
@@ -922,6 +922,7 @@ const orderNumber =
          : 0;
       const merchantPayload = {
         payment_status: 'awaiting',
+        payment_method_code: [paymentMethodCode],
         shipping_status: 'awaiting',
         shipping_method_id: 0,
         shipping_amount: shippingAmount,
