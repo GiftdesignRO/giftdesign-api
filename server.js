@@ -877,7 +877,14 @@ app.post(
           error: 'Date comandă invalide.',
         });
       }
+const merchantProducts = await fetchAll('products');
 
+const productIdBySku = new Map(
+  merchantProducts.map((product) => [
+    String(product.sku || product.product_sku || '').trim(),
+    Number(product.id || product.product_id || 0),
+  ])
+);
       const lineItems = items.map((item) => {
         const price = parsePrice(item.price);
         const quantity = Number(item.quantity || 1);
@@ -885,6 +892,7 @@ app.post(
 
         return {
           item_type: 'product',
+          product_id: productIdBySku.get(String(item.sku || '').trim()) || 0,
           product_sku: item.sku || null,
           product_ean: null,
           product_name: item.title,
