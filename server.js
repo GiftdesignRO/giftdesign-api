@@ -2058,6 +2058,33 @@ app.post('/payments/euplatesc/create', authMiddleware, async (req, res) => {
     });
   }
 });
+app.post('/payments/euplatesc/callback', express.urlencoded({ extended: true }), async (req, res) => {
+  console.log('EUPLATESC CALLBACK:', req.body);
+
+  res.send('OK');
+});
+
+app.get('/payments/euplatesc/success', (req, res) => {
+  res.send(`
+    <html>
+      <body style="font-family:Arial;text-align:center;padding:40px;">
+        <h2>Plata a fost efectuată cu succes.</h2>
+        <p>Poți reveni în aplicația GiftDesign.</p>
+      </body>
+    </html>
+  `);
+});
+
+app.get('/payments/euplatesc/failed', (req, res) => {
+  res.send(`
+    <html>
+      <body style="font-family:Arial;text-align:center;padding:40px;">
+        <h2>Plata nu a fost finalizată.</h2>
+        <p>Te rugăm să încerci din nou.</p>
+      </body>
+    </html>
+  `);
+});
 app.listen(PORT, () => {
   console.log(
     `Server running on port ${PORT}`
