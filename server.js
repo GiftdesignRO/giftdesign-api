@@ -1988,6 +1988,76 @@ app.put('/admin/users/:id', authMiddleware, async (req, res) => {
     });
   }
 });
+function euplatescMac(data, secretKey) {
+  let message = '';
+
+  Object.values(data).forEach((value) => {
+    const text = value == null ? '' : String(value);
+    message += text.length === 0 ? '-' : `${text.length}${text}`;
+  });
+
+  return crypto
+    .createHmac('md5', Buffer.from(secretKey, 'hex'))
+    .update(message, 'utf8')
+    .digest('hex')
+    .toUpperCase();
+}
+app.post('/payments/euplatesc/create', authMiddleware, async (req, res) => {
+  try {
+    if (!process.env.EUPLATESC_MID || !process.env.EUPLATESC_KEY) {
+      return res.status(500).json({
+        error: 'EuPlatesc nu este configurat.',
+      });
+    }
+
+    const { customer, items, total, delivery_method } = req.body || {};
+
+    if (!customer || !items || !Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({
+        error: 'Date plata invalide.',
+      });
+    }
+
+    const invoiceId = `GDAPP-${Date.now()}`;
+    const amount = Number(total || 0).toFixed(2);
+
+    const data = {
+      amount,
+      curr: 'RON',
+      invoice_id: invoiceId,
+      order_desc: `Comanda GiftDesign ${invoiceId}`,
+      merch_id: process.env.EUPLATESC_MID,
+      timestamp: new Date().toISOString().replace(/[-:TZ.]/g, '').slice(0, 14),
+      nonce: crypto.randomBytes(16).toString('hex'),
+    };
+
+    data.fp_hash = euplatescMac(data, process.env.EUPLATESC_KEY);
+
+    res.json({
+      success: true,
+      invoice_id: invoiceId,
+      payment_url: 'https://secure.euplatesc.ro/tdsprocess/tranzactd.php',
+      fields: {
+        ...data,
+        email: customer.email,
+        fname: customer.name,
+        phone: customer.phone,
+        add: customer.address,
+        city: customer.city,
+        state: customer.county,
+        country: 'Romania',
+        'ExtraData[silenturl]': `${process.env.API_URL}/payments/euplatesc/callback`,
+        'ExtraData[successurl]': `${process.env.API_URL}/payments/euplatesc/success`,
+        'ExtraData[failedurl]': `${process.env.API_URL}/payments/euplatesc/failed`,
+        'ExtraData[ep_channel]': 'CC',
+      },
+    });
+  } catch (error) {
+    res.status(500).json({
+      error: error.message,
+    });
+  }
+});
 app.listen(PORT, () => {
   console.log(
     `Server running on port ${PORT}`
