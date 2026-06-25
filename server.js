@@ -923,7 +923,7 @@ const orderNumber =
         payment_status: 'awaiting',
         payment_method_code: [paymentMethodCode],
         shipping_status: 'awaiting',
-        shipping_method_id: 0,
+        shipping_method_id: delivery_method === 'Curier rapid' ? 3 : 0,
         shipping_amount: shippingAmount,
 
         customer_email: customer.email,
