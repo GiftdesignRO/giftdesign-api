@@ -885,7 +885,6 @@ app.post(
 
         return {
           item_type: 'product',
-          product_id: null,
           product_sku: item.sku || null,
           product_ean: null,
           product_name: item.title,
