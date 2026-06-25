@@ -928,7 +928,7 @@ const orderNumber =
          ? 24.9
          : 0;
       const merchantPayload = {
-        payment_status: payment_method === 'Card online' ? 'pending' : 'awaiting',
+        payment_status: ['awaiting'],
         payment_method_code: [paymentMethodCode],
         shipping_status: 'awaiting',
         shipping_method_id: delivery_method === 'Curier rapid' ? 3 : 0,
