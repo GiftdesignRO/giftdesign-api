@@ -1376,13 +1376,8 @@ app.put(
 );
 app.get(
   '/admin/merchantpro/orders-test',
-    async (req, res) => {
-
-  return res.json({
-    test: "BALAUR 2026"
-  });
-
-  try {{
+  async (req, res) => {
+    try {
       const response = await api.get('/api/v2/orders/93283017');
 
       res.json(response.data);
