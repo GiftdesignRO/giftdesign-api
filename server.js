@@ -413,7 +413,47 @@ function parsePrice(value) {
       .trim()
   ) || 0;
 }
+function mainImage(product) {
+  if (Array.isArray(product.images) && product.images.length > 0) {
+    const first = product.images[0];
 
+    if (typeof first === 'string') return first;
+
+    if (first && typeof first === 'object') {
+      return imageValue(first);
+    }
+  }
+
+  return imageValue(product.image_url) ||
+    imageValue(product.image_url?.medium) ||
+    imageValue(product.image_url?.thumb);
+}
+
+function productLite(product) {
+  const image = mainImage(product);
+
+  return {
+    id: product.id || product.product_id || '',
+    name: product.name || '',
+    sku: product.sku || product.product_sku || '',
+    price_gross: product.price_gross || product.price || product.price_net || '',
+    old_price_gross:
+      product.old_price_gross ||
+      product.price_old_gross ||
+      product.old_price ||
+      product.price_old ||
+      '',
+    stock: product.stock || 0,
+    category_name: product.category_name || '',
+    image_url: {
+      medium: image,
+      thumb: image,
+    },
+    images: image ? [{ url: image }] : [],
+    date_created: product.date_created || '',
+    date_modified: product.date_modified || '',
+  };
+}
 app.get('/products', async (req, res) => {
   try {
 
@@ -462,7 +502,60 @@ app.get('/products', async (req, res) => {
     });
   }
 });
+app.get('/products-lite', async (req, res) => {
+  try {
+    if (
+      productsCache &&
+      Date.now() - productsCacheTime < CACHE_TTL
+    ) {
+      console.log('PRODUCTS LITE FROM CACHE');
 
+      return res.json({
+        count: productsCache.count,
+        data: productsCache.data.map(productLite),
+      });
+    }
+
+    console.log('PRODUCTS LITE FROM MERCHANTPRO');
+
+    const start = Date.now();
+
+    const productsRaw = await fetchAll('products');
+
+    const products = uniqueById(productsRaw);
+
+    const visibleProducts = products.filter((p) => {
+      const stock = Number(p.stock || 0);
+      return stock > 0;
+    });
+
+    const result = {
+      count: visibleProducts.length,
+      data: visibleProducts,
+    };
+
+    productsCache = result;
+    productsCacheTime = Date.now();
+
+    console.log(
+      `MerchantPro products lite fetched in ${Date.now() - start} ms`
+    );
+
+    res.json({
+      count: visibleProducts.length,
+      data: visibleProducts.map(productLite),
+    });
+  } catch (error) {
+    console.log(
+      error.response?.data ||
+        error.message
+    );
+
+    res.status(500).json({
+      error: 'Products Lite API failed',
+    });
+  }
+});
 app.get('/categories', async (req, res) => {
   try { 
     if (
