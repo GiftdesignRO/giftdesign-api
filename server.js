@@ -558,43 +558,21 @@ app.get('/products-lite', async (req, res) => {
 });
 app.get('/product/:id', async (req, res) => {
   try {
-    const idOrSku = String(req.params.id || '').trim();
+    const productId = String(req.params.id || '').trim();
 
-    if (!idOrSku) {
+    if (!productId) {
       return res.status(400).json({
         error: 'ID produs lipsă.',
       });
     }
 
-    let products = [];
+    console.log('PRODUCT DETAIL DIRECT FROM MERCHANTPRO:', productId);
 
-    if (
-      productsCache &&
-      Date.now() - productsCacheTime < CACHE_TTL
-    ) {
-      console.log('PRODUCT DETAIL FROM CACHE');
+    const response = await api.get(`/api/v2/products/${productId}`);
 
-      products = productsCache.data || [];
-    } else {
-      console.log('PRODUCT DETAIL FROM MERCHANTPRO');
-
-      const productsRaw = await fetchAll('products');
-      products = uniqueById(productsRaw);
-
-      productsCache = {
-        count: products.length,
-        data: products,
-      };
-
-      productsCacheTime = Date.now();
-    }
-
-    const product = products.find((p) => {
-      const id = String(p.id || p.product_id || '').trim();
-      const sku = String(p.sku || p.product_sku || '').trim();
-
-      return id === idOrSku || sku === idOrSku;
-    });
+    const product =
+      response.data?.data ||
+      response.data;
 
     if (!product) {
       return res.status(404).json({
@@ -608,8 +586,8 @@ app.get('/product/:id', async (req, res) => {
     });
   } catch (error) {
     console.log(
-      error.response?.data ||
-        error.message
+      'PRODUCT DETAIL ERROR:',
+      error.response?.data || error.message
     );
 
     res.status(500).json({
