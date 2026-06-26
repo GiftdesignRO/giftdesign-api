@@ -111,6 +111,17 @@ const api = axios.create({
     password: process.env.MERCHANTPRO_API_SECRET,
   },
 });
+
+// ===== CACHE PRODUSE SI CATEGORII =====
+
+let productsCache = null;
+let productsCacheTime = 0;
+
+let categoriesCache = null;
+let categoriesCacheTime = 0;
+
+const CACHE_TTL = 5 * 60 * 1000; // 5 minute
+
 app.get('/admin/payment-methods-test', async (req, res) => {
   try {
     const response = await api.get('/api/v2/payment_methods');
@@ -405,22 +416,42 @@ function parsePrice(value) {
 
 app.get('/products', async (req, res) => {
   try {
-    const productsRaw =
-      await fetchAll('products');
 
-    const products =
-      uniqueById(productsRaw);
+  if (
+    productsCache &&
+    Date.now() - productsCacheTime < CACHE_TTL
+  ) {
+    console.log('PRODUCTS FROM CACHE');
 
-    const visibleProducts = products.filter((p) => {
-      const stock = Number(p.stock || 0);
-      return stock > 0;
-    });
+    return res.json(productsCache);
+  }
 
-    res.json({
-      count: visibleProducts.length,
-      data: visibleProducts,
-    });
-  } catch (error) {
+  console.log('PRODUCTS FROM MERCHANTPRO');
+
+  const start = Date.now();
+  const productsRaw = await fetchAll('products');
+
+  const products = uniqueById(productsRaw);
+  console.log(
+  `MerchantPro products fetched in ${Date.now() - start} ms`
+);
+
+  const visibleProducts = products.filter((p) => {
+    const stock = Number(p.stock || 0);
+    return stock > 0;
+  });
+
+  const result = {
+    count: visibleProducts.length,
+    data: visibleProducts,
+  };
+
+  productsCache = result;
+  productsCacheTime = Date.now();
+
+  res.json(result);
+
+} catch (error) {
     console.log(
       error.response?.data ||
         error.message
@@ -433,7 +464,19 @@ app.get('/products', async (req, res) => {
 });
 
 app.get('/categories', async (req, res) => {
-  try {
+  try { 
+    if (
+  categoriesCache &&
+  Date.now() - categoriesCacheTime < CACHE_TTL
+) {
+  console.log('CATEGORIES FROM CACHE');
+
+  return res.json(categoriesCache);
+}
+
+console.log('CATEGORIES FROM MERCHANTPRO');
+
+const start = Date.now();
     const categoriesRaw =
       await fetchAll('categories');
 
@@ -475,10 +518,20 @@ app.get('/categories', async (req, res) => {
       }
     );
 
-    res.json({
-      count: formatted.length,
-      data: formatted,
-    });
+    console.log(
+  `MerchantPro categories fetched in ${Date.now() - start} ms`
+);
+
+const result = {
+  count: formatted.length,
+  data: formatted,
+};
+
+categoriesCache = result;
+categoriesCacheTime = Date.now();
+
+res.json(result);
+return;
   } catch (error) {
     console.log(
       error.response?.data ||
