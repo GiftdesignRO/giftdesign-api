@@ -171,7 +171,25 @@ app.post('/admin/test-push', authMiddleware, async (req, res) => {
         type: 'test',
       },
     });
-    app.get('/admin/test-push-link', async (req, res) => {
+    
+
+    console.log('PUSH MESSAGE ID:', messageId);
+
+    res.json({
+      success: true,
+      message: 'Notificare trimisă.',
+      messageId,
+    });
+  } catch (error) {
+    console.error('TEST PUSH ERROR:', error);
+
+    res.status(500).json({
+      error: 'Nu am putut trimite notificarea.',
+      details: error.message,
+    });
+  }
+});
+app.get('/admin/test-push-link', async (req, res) => {
   try {
     const result = await pool.query(
       `
@@ -205,23 +223,6 @@ app.post('/admin/test-push', authMiddleware, async (req, res) => {
   } catch (error) {
     console.error('TEST PUSH LINK ERROR:', error);
     res.status(500).send(error.message);
-  }
-});
-
-    console.log('PUSH MESSAGE ID:', messageId);
-
-    res.json({
-      success: true,
-      message: 'Notificare trimisă.',
-      messageId,
-    });
-  } catch (error) {
-    console.error('TEST PUSH ERROR:', error);
-
-    res.status(500).json({
-      error: 'Nu am putut trimite notificarea.',
-      details: error.message,
-    });
   }
 });
 
