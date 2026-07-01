@@ -171,15 +171,9 @@ app.post('/admin/test-push', authMiddleware, async (req, res) => {
         type: 'test',
       },
     });
-    });
 
-console.log('PUSH MESSAGE ID:', messageId);
+    console.log('PUSH MESSAGE ID:', messageId);
 
-res.json({
-  success: true,
-  message: 'Notificare trimisă.',
-  messageId,
-});
     res.json({
       success: true,
       message: 'Notificare trimisă.',
