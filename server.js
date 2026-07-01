@@ -8,6 +8,7 @@ const nodemailer = require('nodemailer');
 const { Pool } = require('pg');
 const dns = require('dns');
 const { initializeApp, cert, getApps } = require('firebase-admin/app');
+const { getMessaging } = require('firebase-admin/messaging');
 
 const app = express();
 if (getApps().length === 0) {
@@ -131,6 +132,57 @@ app.post('/fcm-token', authMiddleware, async (req, res) => {
 
     res.status(500).json({
       error: 'Nu am putut salva FCM token.',
+    });
+  }
+});
+app.post('/admin/test-push', authMiddleware, async (req, res) => {
+  try {
+    const userResult = await pool.query(
+      `
+        select role, fcm_token
+        from public.users
+        where id = $1
+        limit 1
+      `,
+      [req.user.id]
+    );
+
+    const user = userResult.rows[0];
+
+    if (!user || user.role !== 'admin') {
+      return res.status(403).json({
+        error: 'Access interzis.',
+      });
+    }
+
+    if (!user.fcm_token) {
+      return res.status(400).json({
+        error: 'FCM token lipsă.',
+      });
+    }
+
+    const messageId = await getMessaging().send({
+      token: user.fcm_token,
+      notification: {
+        title: 'GiftDesign',
+        body: 'Salutare, balaure! Push din server funcționează 🐉🔥',
+      },
+      data: {
+        type: 'test',
+      },
+    });
+
+    res.json({
+      success: true,
+      message: 'Notificare trimisă.',
+      messageId,
+    });
+  } catch (error) {
+    console.error('TEST PUSH ERROR:', error);
+
+    res.status(500).json({
+      error: 'Nu am putut trimite notificarea.',
+      details: error.message,
     });
   }
 });
