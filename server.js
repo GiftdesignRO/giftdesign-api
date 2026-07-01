@@ -210,15 +210,30 @@ if (!fcmToken) {
 }
 
     const messageId = await getMessaging().send({
-      token: fcmToken,
-      notification: {
-        title: 'GiftDesign',
-        body: 'Push din browser către telefon 🐉🔥',
+  token: fcmToken,
+
+  notification: {
+    title: 'GiftDesign',
+    body: 'Push din browser către telefon 🐉🔥',
+  },
+
+  android: {
+    priority: 'high',
+    notification: {
+      channelId: 'high_importance_channel',
+      priority: 'high',
+      defaultSound: true,
+    },
+  },
+
+  apns: {
+    payload: {
+      aps: {
+        sound: 'default',
       },
-      data: {
-        type: 'test',
-      },
-    });
+    },
+  },
+});
 
     console.log('PUSH LINK MESSAGE ID:', messageId);
 
