@@ -171,6 +171,42 @@ app.post('/admin/test-push', authMiddleware, async (req, res) => {
         type: 'test',
       },
     });
+    app.get('/admin/test-push-link', async (req, res) => {
+  try {
+    const result = await pool.query(
+      `
+        select fcm_token
+        from public.users
+        where email = 'overclockmanager@gmail.com'
+        limit 1
+      `
+    );
+
+    const fcmToken = result.rows[0]?.fcm_token;
+
+    if (!fcmToken) {
+      return res.status(400).send('FCM token lipsă.');
+    }
+
+    const messageId = await getMessaging().send({
+      token: fcmToken,
+      notification: {
+        title: 'GiftDesign',
+        body: 'Push din browser către telefon 🐉🔥',
+      },
+      data: {
+        type: 'test',
+      },
+    });
+
+    console.log('PUSH LINK MESSAGE ID:', messageId);
+
+    res.send(`Push trimis: ${messageId}`);
+  } catch (error) {
+    console.error('TEST PUSH LINK ERROR:', error);
+    res.status(500).send(error.message);
+  }
+});
 
     console.log('PUSH MESSAGE ID:', messageId);
 
