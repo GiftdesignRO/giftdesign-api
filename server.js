@@ -202,9 +202,12 @@ app.get('/admin/test-push-link', async (req, res) => {
 
     const fcmToken = result.rows[0]?.fcm_token;
 
-    if (!fcmToken) {
-      return res.status(400).send('FCM token lipsă.');
-    }
+console.log('FCM TOKEN DIN DB:', fcmToken);
+console.log('FCM TOKEN LENGTH:', fcmToken?.length);
+
+if (!fcmToken) {
+  return res.status(400).send('FCM token lipsă.');
+}
 
     const messageId = await getMessaging().send({
       token: fcmToken,
