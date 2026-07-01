@@ -7,8 +7,18 @@ const crypto = require('crypto');
 const nodemailer = require('nodemailer');
 const { Pool } = require('pg');
 const dns = require('dns');
+const admin = require('firebase-admin');
 
 const app = express();
+if (!admin.apps.length) {
+  admin.initializeApp({
+    credential: admin.credential.cert({
+      projectId: process.env.FIREBASE_PROJECT_ID,
+      clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+      privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
+    }),
+  });
+}
 
 app.use(cors());
 app.use(express.json());
@@ -93,6 +103,37 @@ function authMiddleware(req, res, next) {
 
   next();
 }
+app.post('/fcm-token', authMiddleware, async (req, res) => {
+  try {
+    const fcmToken = (req.body?.token || '').trim();
+
+    if (!fcmToken) {
+      return res.status(400).json({
+        error: 'FCM token lipsă.',
+      });
+    }
+
+    await pool.query(
+      `
+        update public.users
+        set fcm_token = $1
+        where id = $2
+      `,
+      [fcmToken, req.user.id]
+    );
+
+    res.json({
+      success: true,
+      message: 'FCM token salvat.',
+    });
+  } catch (error) {
+    console.error('FCM token save error:', error);
+
+    res.status(500).json({
+      error: 'Nu am putut salva FCM token.',
+    });
+  }
+});
 
 function publicUser(user) {
   return {
