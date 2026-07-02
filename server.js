@@ -1772,7 +1772,12 @@ try {
     console.log('ORDER STATUS PUSH SKIPPED: order has no user_id');
   }
 } catch (pushError) {
-  console.error('ORDER STATUS PUSH ERROR:', pushError.message);
+  console.error('ORDER STATUS PUSH ERROR:', pushError);
+
+console.error(
+  'TOKEN:',
+  fcmToken,
+);
 }
 
       res.json({
