@@ -1617,6 +1617,33 @@ if (!currentUser || currentUser.role !== 'admin') {
     }
   }
 );
+function orderStatusPushText(orderNumber, status) {
+  const cleanOrderNumber = orderNumber || 'comanda ta';
+
+  const messages = {
+    'Procesare': {
+      title: '🛍️ GiftDesign',
+      body: `Comanda ${cleanOrderNumber} este acum în procesare. Îți pregătim produsele cu grijă! 💜`,
+    },
+    'Expediată': {
+      title: '📦 Comanda a plecat!',
+      body: `Comanda ${cleanOrderNumber} a fost expediată. O vei primi în curând! 🚚`,
+    },
+    'Livrată': {
+      title: '🎉 A ajuns!',
+      body: `Comanda ${cleanOrderNumber} a fost livrată. Sperăm să te bucuri de produsele GiftDesign! 💜`,
+    },
+    'Anulată': {
+      title: 'ℹ️ Actualizare comandă',
+      body: `Comanda ${cleanOrderNumber} a fost anulată. Dacă ai nevoie de ajutor, suntem aici pentru tine.`,
+    },
+  };
+
+  return messages[status] || {
+    title: 'GiftDesign',
+    body: `Statusul comenzii ${cleanOrderNumber} a fost actualizat.`,
+  };
+}
 app.put(
   '/admin/orders/:id/status',
   authMiddleware,
@@ -1718,29 +1745,10 @@ try {
     const fcmToken = tokenResult.rows[0]?.fcm_token;
 
     if (fcmToken) {
-      const pushTexts = {
-        'Procesare': {
-          title: 'GiftDesign',
-          body: `Comanda ${updatedOrder.order_number} este în procesare.`,
-        },
-        'Expediată': {
-          title: 'GiftDesign',
-          body: `Comanda ${updatedOrder.order_number} a fost expediată. 📦`,
-        },
-        'Livrată': {
-          title: 'GiftDesign',
-          body: `Comanda ${updatedOrder.order_number} a fost livrată. Mulțumim! ✅`,
-        },
-        'Anulată': {
-          title: 'GiftDesign',
-          body: `Comanda ${updatedOrder.order_number} a fost anulată.`,
-        },
-      };
-
-      const push = pushTexts[status] || {
-        title: 'GiftDesign',
-        body: `Statusul comenzii ${updatedOrder.order_number} a fost actualizat.`,
-      };
+      const push = orderStatusPushText(
+  updatedOrder.order_number,
+  status
+);
 
       const messageId = await getMessaging().send({
         token: fcmToken,
