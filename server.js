@@ -1212,7 +1212,29 @@ app.post(
           error: 'Date comandă invalide.',
         });
       }
-const merchantProducts = await fetchAll('products');
+let merchantProducts = [];
+
+if (
+  productsCache &&
+  productsCache.data &&
+  Date.now() - productsCacheTime < CACHE_TTL
+) {
+  console.log('ORDER PRODUCTS FROM CACHE');
+  merchantProducts = productsCache.data;
+} else {
+  console.log('ORDER PRODUCTS FROM MERCHANTPRO');
+
+  const productsRaw = await fetchAll('products');
+
+  merchantProducts = uniqueById(productsRaw);
+
+  productsCache = {
+    count: merchantProducts.length,
+    data: merchantProducts,
+  };
+
+  productsCacheTime = Date.now();
+}
 
 const productIdBySku = new Map(
   merchantProducts.map((product) => [
