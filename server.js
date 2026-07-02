@@ -1659,11 +1659,13 @@ app.put(
       const orderResult = await pool.query(
         `
           select
-            id,
-            merchantpro_order_id
-          from public.orders
-          where id = $1
-          limit 1
+  id,
+  order_number,
+  user_id,
+  merchantpro_order_id
+from public.orders
+where id = $1
+limit 1
         `,
         [orderId]
       );
@@ -1699,6 +1701,79 @@ app.put(
         `,
         [status, orderId]
       );
+      const updatedOrder = updateResult.rows[0];
+
+try {
+  if (updatedOrder?.user_id) {
+    const tokenResult = await pool.query(
+      `
+        select fcm_token
+        from public.users
+        where id = $1
+        limit 1
+      `,
+      [updatedOrder.user_id]
+    );
+
+    const fcmToken = tokenResult.rows[0]?.fcm_token;
+
+    if (fcmToken) {
+      const pushTexts = {
+        'Procesare': {
+          title: 'GiftDesign',
+          body: `Comanda ${updatedOrder.order_number} este în procesare.`,
+        },
+        'Expediată': {
+          title: 'GiftDesign',
+          body: `Comanda ${updatedOrder.order_number} a fost expediată. 📦`,
+        },
+        'Livrată': {
+          title: 'GiftDesign',
+          body: `Comanda ${updatedOrder.order_number} a fost livrată. Mulțumim! ✅`,
+        },
+        'Anulată': {
+          title: 'GiftDesign',
+          body: `Comanda ${updatedOrder.order_number} a fost anulată.`,
+        },
+      };
+
+      const push = pushTexts[status] || {
+        title: 'GiftDesign',
+        body: `Statusul comenzii ${updatedOrder.order_number} a fost actualizat.`,
+      };
+
+      const messageId = await getMessaging().send({
+        token: fcmToken,
+        notification: {
+          title: push.title,
+          body: push.body,
+        },
+        android: {
+          priority: 'high',
+          notification: {
+            channelId: 'high_importance_channel',
+            priority: 'high',
+            defaultSound: true,
+          },
+        },
+        data: {
+          type: 'order_status',
+          order_id: updatedOrder.id,
+          order_number: updatedOrder.order_number || '',
+          status,
+        },
+      });
+
+      console.log('ORDER STATUS PUSH ID:', messageId);
+    } else {
+      console.log('ORDER STATUS PUSH SKIPPED: user has no fcm_token');
+    }
+  } else {
+    console.log('ORDER STATUS PUSH SKIPPED: order has no user_id');
+  }
+} catch (pushError) {
+  console.error('ORDER STATUS PUSH ERROR:', pushError.message);
+}
 
       res.json({
         success: true,
