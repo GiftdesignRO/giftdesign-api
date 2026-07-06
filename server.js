@@ -5,105 +5,26 @@ const axios = require('axios');
 const cors = require('cors');
 const crypto = require('crypto');
 const nodemailer = require('nodemailer');
-const { Pool } = require('pg');
 const dns = require('dns');
-const { initializeApp, cert, getApps } = require('firebase-admin/app');
-const { getMessaging } = require('firebase-admin/messaging');
+
+const pool = require('./config/database');
+const api = require('./config/merchantpro');
+const { getMessaging } = require('./config/firebase');
+
+const {
+  hashPassword,
+  generateToken,
+} = require('./utils/auth');
+
+const authMiddleware = require('./middleware/auth');
 
 const app = express();
-if (getApps().length === 0) {
-  initializeApp({
-    credential: cert({
-      projectId: process.env.FIREBASE_PROJECT_ID,
-      clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-      privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-    }),
-  });
-}
 
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-const JWT_SECRET =
-  process.env.JWT_SECRET ||
-  'giftdesign-super-secret';
 
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: {
-    rejectUnauthorized: false,
-  },
-});
-
-function hashPassword(password) {
-  return crypto
-    .createHash('sha256')
-    .update(password)
-    .digest('hex');
-}
-
-function generateToken(user) {
-  const payload = {
-    id: user.id,
-    email: user.email,
-    ts: Date.now(),
-    secret: JWT_SECRET,
-  };
-
-  return Buffer.from(
-    JSON.stringify(payload)
-  ).toString('base64');
-}
-
-function verifyToken(token) {
-  try {
-    const decoded = JSON.parse(
-      Buffer.from(token, 'base64').toString()
-    );
-
-    if (decoded.secret !== JWT_SECRET) {
-      return null;
-    }
-
-    return decoded;
-  } catch (e) {
-    return null;
-  }
-}
-
-function authMiddleware(req, res, next) {
-  const auth =
-    req.headers.authorization || '';
-
-  console.log('AUTH HEADER:', auth);
-
-  const token = auth.replace('Bearer ', '');
-
-  if (!token) {
-    console.log('TOKEN MISSING');
-
-    return res.status(401).json({
-      error: 'Token lipsă.',
-    });
-  }
-
-  const decoded = verifyToken(token);
-
-  if (!decoded) {
-    console.log('TOKEN INVALID');
-
-    return res.status(401).json({
-      error: 'Token invalid.',
-    });
-  }
-
-  console.log('TOKEN OK:', decoded.email);
-
-  req.user = decoded;
-
-  next();
-}
 app.post('/fcm-token', authMiddleware, async (req, res) => {
   try {
     const fcmToken = (req.body?.token || '').trim();
@@ -254,13 +175,7 @@ function publicUser(user) {
   };
 }
 
-const api = axios.create({
-  baseURL: process.env.MERCHANTPRO_BASE_URL,
-  auth: {
-    username: process.env.MERCHANTPRO_API_KEY,
-    password: process.env.MERCHANTPRO_API_SECRET,
-  },
-});
+
 
 // ===== CACHE PRODUSE SI CATEGORII =====
 
