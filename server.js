@@ -2397,12 +2397,7 @@ const items = Array.isArray(mpOrder.line_items)
     }
   }
 );
-app.post(
-  '/webhooks/merchantpro/order-created',
-  async (req, res) => {
-    ...
-  }
-);
+
 
 // <<< AICI ÎNCEPE RUTA NOUĂ >>>
 
