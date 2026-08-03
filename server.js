@@ -1441,6 +1441,17 @@ for (let start = 0; start < 200; start += limit) {
   const pageOrders = Array.isArray(pageResponse.data?.data)
     ? pageResponse.data.data
     : [];
+  console.log(
+  'PAGINA MERCHANTPRO:',
+  {
+    start,
+    count: pageOrders.length,
+    firstId: pageOrders[0]?.id,
+    firstDate: pageOrders[0]?.date_created,
+    lastId: pageOrders[pageOrders.length - 1]?.id,
+    lastDate: pageOrders[pageOrders.length - 1]?.date_created,
+  }
+);
 
   merchantOrders.push(...pageOrders);
 
