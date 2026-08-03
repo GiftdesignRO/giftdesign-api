@@ -1449,6 +1449,24 @@ app.post(
           error: 'Access interzis.',
         });
       }
+      const syncStateResult = await pool.query(
+  `
+    select last_synced_at
+    from public.sync_state
+    where sync_key = 'merchantpro_orders'
+    limit 1
+  `
+);
+
+const lastSyncedAt =
+  syncStateResult.rows[0]?.last_synced_at
+    ? new Date(syncStateResult.rows[0].last_synced_at)
+    : null;
+
+console.log(
+  'ULTIMA SINCRONIZARE SALVATA:',
+  lastSyncedAt?.toISOString() || 'niciuna'
+);
 
       const firstResponse = await api.get('/api/v2/orders', {
   params: {
@@ -1488,14 +1506,32 @@ for (let start = 0; start < totalOrders; start += limit) {
   }
 }
 
+const overlapMs = 5 * 60 * 1000;
+
+const cutoffTime = lastSyncedAt
+  ? lastSyncedAt.getTime() - overlapMs
+  : 0;
+
 const merchantOrders = allMerchantOrders
-  .filter((order) => order?.id && order?.date_created)
+  .filter((order) => {
+    if (!order?.id || !order?.date_created) {
+      return false;
+    }
+
+    const createdTime = new Date(order.date_created).getTime();
+
+    return Number.isFinite(createdTime) && createdTime > cutoffTime;
+  })
   .sort(
     (a, b) =>
-      new Date(b.date_created).getTime() -
-      new Date(a.date_created).getTime()
-  )
-  .slice(0, 200);
+      new Date(a.date_created).getTime() -
+      new Date(b.date_created).getTime()
+  );
+
+console.log(
+  'COMENZI NOI DE VERIFICAT:',
+  merchantOrders.length
+);
 
 console.log('TOTAL COMENZI API:', totalOrders);
 console.log('TOTAL COMENZI DESCĂRCATE:', allMerchantOrders.length);
@@ -1616,6 +1652,51 @@ const customer = {
 
         imported++;
       }
+      const newestOrderDate = merchantOrders.reduce(
+  (latest, order) => {
+    const orderDate = new Date(order.date_created);
+
+    if (
+      !Number.isFinite(orderDate.getTime()) ||
+      orderDate <= latest
+    ) {
+      return latest;
+    }
+
+    return orderDate;
+  },
+  lastSyncedAt || new Date(0)
+);
+
+if (newestOrderDate.getTime() > 0) {
+  await pool.query(
+    `
+      insert into public.sync_state (
+        sync_key,
+        last_synced_at,
+        updated_at
+      )
+      values (
+        'merchantpro_orders',
+        $1,
+        now()
+      )
+      on conflict (sync_key)
+      do update set
+        last_synced_at = greatest(
+          public.sync_state.last_synced_at,
+          excluded.last_synced_at
+        ),
+        updated_at = now()
+    `,
+    [newestOrderDate]
+  );
+
+  console.log(
+    'ULTIMA SINCRONIZARE SALVATA:',
+    newestOrderDate.toISOString()
+  );
+}
       console.log('IMPORT REZULTAT:', {
   imported,
   skipped,
