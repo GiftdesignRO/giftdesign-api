@@ -1158,6 +1158,13 @@ if (!currentUser || currentUser.role !== 'admin') {
     error: 'Access interzis.',
   });
 }
+if (merchantProSyncRunning) {
+  return res.status(409).json({
+    error: 'Sincronizarea este deja în desfășurare.',
+  });
+}
+
+merchantProSyncRunning = true;
 
       const result = await pool.query(
         `
@@ -1427,6 +1434,7 @@ app.get('/admin/create-sync-state-table', async (req, res) => {
     });
   }
 });
+let merchantProSyncRunning = false;
 app.post(
   '/admin/orders/sync-merchantpro',
   authMiddleware,
@@ -1553,28 +1561,32 @@ console.log(
       let imported = 0;
       let skipped = 0;
 
+      const existingOrdersResult = await pool.query(
+  `
+    select merchantpro_order_id
+    from public.orders
+    where merchantpro_order_id is not null
+  `
+);
+
+const existingMerchantOrderIds = new Set(
+  existingOrdersResult.rows.map((row) =>
+    String(row.merchantpro_order_id).trim()
+  )
+);
       for (const mpOrder of merchantOrders) {
         const merchantOrderId = String(mpOrder.id || '').trim();
+        if (existingMerchantOrderIds.has(merchantOrderId)) {
+  skipped++;
+  continue;
+}
 
         if (!merchantOrderId) {
           skipped++;
           continue;
         }
 
-        const existsResult = await pool.query(
-          `
-          select id
-          from public.orders
-          where merchantpro_order_id = $1
-          limit 1
-          `,
-          [merchantOrderId]
-        );
-
-        if (existsResult.rows.length > 0) {
-          skipped++;
-          continue;
-        }
+        
 
         const customerName =
   `${mpOrder.billing_first_name || mpOrder.shipping_first_name || ''} ${
@@ -1651,6 +1663,7 @@ const customer = {
         );
 
         imported++;
+        existingMerchantOrderIds.add(merchantOrderId);
       }
       const newestOrderDate = merchantOrders.reduce(
   (latest, order) => {
@@ -1719,6 +1732,9 @@ if (newestOrderDate.getTime() > 0) {
         details: error.response?.data || error.message,
       });
     }
+    finally {
+  merchantProSyncRunning = false;
+}
   }
 );
 app.get('/test-email', async (req, res) => {
