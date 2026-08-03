@@ -2249,6 +2249,32 @@ app.get('/payments/euplatesc/failed', (req, res) => {
     </html>
   `);
 });
+app.post(
+  '/webhooks/merchantpro/order-created',
+  async (req, res) => {
+    try {
+      console.log(
+        'MERCHANTPRO ORDER WEBHOOK:',
+        JSON.stringify(req.body, null, 2)
+      );
+
+      res.status(200).json({
+        success: true,
+        message: 'Webhook primit.',
+      });
+    } catch (error) {
+      console.error(
+        'MERCHANTPRO WEBHOOK ERROR:',
+        error.message
+      );
+
+      res.status(500).json({
+        success: false,
+        error: 'Webhook failed.',
+      });
+    }
+  }
+);
 app.listen(PORT, '0.0.0.0', () => {
   console.log(
     `Server running on port ${PORT}`
