@@ -1427,10 +1427,21 @@ app.post(
         });
       }
 
-      const limit = 100;
-const merchantOrders = [];
+      const firstResponse = await api.get('/api/v2/orders', {
+  params: {
+    start: 0,
+    limit: 100,
+  },
+});
 
-for (let start = 0; start < 200; start += limit) {
+const totalOrders = Number(
+  firstResponse.data?.meta?.count?.total || 0
+);
+
+const limit = 100;
+const allMerchantOrders = [];
+
+for (let start = 0; start < totalOrders; start += limit) {
   const pageResponse = await api.get('/api/v2/orders', {
     params: {
       start,
@@ -1441,53 +1452,39 @@ for (let start = 0; start < 200; start += limit) {
   const pageOrders = Array.isArray(pageResponse.data?.data)
     ? pageResponse.data.data
     : [];
+
+  allMerchantOrders.push(...pageOrders);
+
   console.log(
-  'PAGINA MERCHANTPRO:',
-  {
-    start,
-    count: pageOrders.length,
-    firstId: pageOrders[0]?.id,
-    firstDate: pageOrders[0]?.date_created,
-    lastId: pageOrders[pageOrders.length - 1]?.id,
-    lastDate: pageOrders[pageOrders.length - 1]?.date_created,
-  }
-);
+    `MERCHANTPRO PAGINA ${start}:`,
+    pageOrders.length
+  );
 
-  merchantOrders.push(...pageOrders);
-
-  if (pageOrders.length < limit) {
+  if (pageOrders.length === 0) {
     break;
   }
 }
-console.log(
-  'ULTIMELE COMENZI MERCHANTPRO GĂSITE:',
-  merchantOrders.length
-);
+
+const merchantOrders = allMerchantOrders
+  .filter((order) => order?.id && order?.date_created)
+  .sort(
+    (a, b) =>
+      new Date(b.date_created).getTime() -
+      new Date(a.date_created).getTime()
+  )
+  .slice(0, 200);
+
+console.log('TOTAL COMENZI API:', totalOrders);
+console.log('TOTAL COMENZI DESCĂRCATE:', allMerchantOrders.length);
 
 console.log(
-  'PRIMA COMANDA DIN LISTA:',
+  'CEA MAI NOUA COMANDA:',
   merchantOrders[0]?.id,
   merchantOrders[0]?.date_created
 );
 
 console.log(
-  'ULTIMA COMANDA DIN LISTA:',
-  merchantOrders[merchantOrders.length - 1]?.id,
-  merchantOrders[merchantOrders.length - 1]?.date_created
-);
-
-console.log(
-  'ULTIMELE COMENZI MERCHANTPRO GĂSITE:',
-  merchantOrders.length
-);
-console.log(
-  'PRIMA COMANDA DIN LISTA:',
-  merchantOrders[0]?.id,
-  merchantOrders[0]?.date_created
-);
-
-console.log(
-  'ULTIMA COMANDA DIN LISTA:',
+  'CEA MAI VECHE DIN CELE 200:',
   merchantOrders[merchantOrders.length - 1]?.id,
   merchantOrders[merchantOrders.length - 1]?.date_created
 );
