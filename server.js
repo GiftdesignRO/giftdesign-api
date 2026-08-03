@@ -1427,30 +1427,32 @@ app.post(
         });
       }
 
-      const firstResponse = await api.get('/api/v2/orders');
-
-const totalOrders = Number(firstResponse.data?.meta?.count?.total || 0);
-const limit = Number(firstResponse.data?.meta?.count?.limit || 20);
-
-const startPoints = [];
-
-for (
-  let start = Math.max(totalOrders - limit, 0);
-  start >= Math.max(totalOrders - 200, 0);
-  start -= limit
-) {
-  startPoints.push(start);
-}
-
+      const limit = 100;
 const merchantOrders = [];
 
-for (const start of startPoints) {
+for (let start = 0; start < 200; start += limit) {
   const pageResponse = await api.get('/api/v2/orders', {
-    params: { start },
+    params: {
+      start,
+      limit,
+    },
   });
 
-  merchantOrders.push(...(pageResponse.data?.data || []));
+  const pageOrders = Array.isArray(pageResponse.data?.data)
+    ? pageResponse.data.data
+    : [];
+
+  merchantOrders.push(...pageOrders);
+
+  if (pageOrders.length < limit) {
+    break;
+  }
 }
+
+console.log(
+  'ULTIMELE COMENZI MERCHANTPRO GĂSITE:',
+  merchantOrders.length
+);
 
       
 
