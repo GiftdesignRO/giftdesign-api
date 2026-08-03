@@ -2264,6 +2264,7 @@ if (!merchantOrderId) {
   });
 }
 
+
 const existingOrderResult = await pool.query(
   `
     select id
@@ -2396,6 +2397,43 @@ const items = Array.isArray(mpOrder.line_items)
     }
   }
 );
+app.post(
+  '/webhooks/merchantpro/order-created',
+  async (req, res) => {
+    ...
+  }
+);
+
+// <<< AICI ÎNCEPE RUTA NOUĂ >>>
+
+app.post(
+  '/webhooks/merchantpro/order-updated',
+  async (req, res) => {
+    try {
+      console.log(
+        'MERCHANTPRO ORDER UPDATED:',
+        JSON.stringify(req.body, null, 2)
+      );
+
+      res.status(200).json({
+        success: true,
+        message: 'Order update primit.',
+      });
+
+    } catch (error) {
+      console.error(
+        'MERCHANTPRO ORDER UPDATE ERROR:',
+        error.message
+      );
+
+      res.status(500).json({
+        success: false,
+        error: 'Webhook failed.',
+      });
+    }
+  }
+);
+
 app.listen(PORT, '0.0.0.0', () => {
   console.log(
     `Server running on port ${PORT}`
