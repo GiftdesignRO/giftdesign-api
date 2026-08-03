@@ -1448,10 +1448,37 @@ for (let start = 0; start < 200; start += limit) {
     break;
   }
 }
+console.log(
+  'ULTIMELE COMENZI MERCHANTPRO GĂSITE:',
+  merchantOrders.length
+);
+
+console.log(
+  'PRIMA COMANDA DIN LISTA:',
+  merchantOrders[0]?.id,
+  merchantOrders[0]?.date_created
+);
+
+console.log(
+  'ULTIMA COMANDA DIN LISTA:',
+  merchantOrders[merchantOrders.length - 1]?.id,
+  merchantOrders[merchantOrders.length - 1]?.date_created
+);
 
 console.log(
   'ULTIMELE COMENZI MERCHANTPRO GĂSITE:',
   merchantOrders.length
+);
+console.log(
+  'PRIMA COMANDA DIN LISTA:',
+  merchantOrders[0]?.id,
+  merchantOrders[0]?.date_created
+);
+
+console.log(
+  'ULTIMA COMANDA DIN LISTA:',
+  merchantOrders[merchantOrders.length - 1]?.id,
+  merchantOrders[merchantOrders.length - 1]?.date_created
 );
 
       
@@ -1558,6 +1585,11 @@ const customer = {
 
         imported++;
       }
+      console.log('IMPORT REZULTAT:', {
+  imported,
+  skipped,
+  total: merchantOrders.length,
+});
 
       res.json({
         imported,
