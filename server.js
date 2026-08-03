@@ -2253,15 +2253,136 @@ app.post(
   '/webhooks/merchantpro/order-created',
   async (req, res) => {
     try {
+      const mpOrder = req.body || {};
+
+const merchantOrderId = String(mpOrder.id || '').trim();
+
+if (!merchantOrderId) {
+  return res.status(400).json({
+    success: false,
+    error: 'ID comandă MerchantPro lipsă.',
+  });
+}
+
+const existingOrderResult = await pool.query(
+  `
+    select id
+    from public.orders
+    where merchantpro_order_id = $1
+    limit 1
+  `,
+  [merchantOrderId]
+);
+
+if (existingOrderResult.rows.length > 0) {
+  console.log(
+    'MERCHANTPRO WEBHOOK SKIPPED:',
+    merchantOrderId
+  );
+
+  return res.status(200).json({
+    success: true,
+    skipped: true,
+  });
+}
+const customer = {
+  name:
+    mpOrder.shipping_name ||
+    mpOrder.billing_name ||
+    mpOrder.customer_data?.shipping_name ||
+    mpOrder.customer_data?.billing_name ||
+    '',
+  email:
+    mpOrder.customer_email ||
+    mpOrder.customer_data?.email ||
+    '',
+  phone:
+    mpOrder.shipping_phone ||
+    mpOrder.billing_phone ||
+    mpOrder.customer_data?.shipping_phone ||
+    mpOrder.customer_data?.billing_phone ||
+    '',
+  address:
+    mpOrder.shipping_address ||
+    mpOrder.billing_address ||
+    '',
+  city:
+    mpOrder.shipping_city ||
+    mpOrder.billing_city ||
+    '',
+  county:
+    mpOrder.shipping_state ||
+    mpOrder.billing_state ||
+    '',
+  country:
+    mpOrder.shipping_country_name ||
+    mpOrder.billing_country_name ||
+    'România',
+};
+
+const items = Array.isArray(mpOrder.line_items)
+  ? mpOrder.line_items.map((item) => ({
+      title: item.product_name || '',
+      sku: item.product_sku || '',
+      quantity: Number(item.quantity || 1),
+      price: Number(item.unit_price_gross || 0),
+    }))
+  : [];
+  await pool.query(
+  `
+    insert into public.orders (
+      id,
+      order_number,
+      user_id,
+      customer,
+      items,
+      total,
+      delivery_method,
+      payment_method,
+      merchantpro_response,
+      merchantpro_order_id,
+      status,
+      created_at
+    )
+    values (
+      gen_random_uuid(),
+      $1,
+      null,
+      $2,
+      $3,
+      $4,
+      $5,
+      $6,
+      $7,
+      $8,
+      $9,
+      $10
+    )
+  `,
+  [
+    merchantOrderId,
+    customer,
+    JSON.stringify(items),
+    Number(mpOrder.total_amount || 0),
+    mpOrder.shipping_method_name || '',
+    mpOrder.payment_method_name || '',
+    mpOrder,
+    merchantOrderId,
+    mpOrder.cancelled ? 'Anulată' : 'Procesare',
+    mpOrder.date_created || new Date(),
+  ]
+);
       console.log(
         'MERCHANTPRO ORDER WEBHOOK:',
         JSON.stringify(req.body, null, 2)
       );
 
-      res.status(200).json({
-        success: true,
-        message: 'Webhook primit.',
-      });
+      res.status(201).json({
+  success: true,
+  imported: true,
+  merchantpro_order_id: merchantOrderId,
+  message: 'Comanda a fost importată prin webhook.',
+});
     } catch (error) {
       console.error(
         'MERCHANTPRO WEBHOOK ERROR:',
