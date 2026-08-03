@@ -1404,6 +1404,29 @@ app.get(
     }
   }
 );
+app.get('/admin/create-sync-state-table', async (req, res) => {
+  try {
+    await pool.query(`
+      create table if not exists public.sync_state (
+        sync_key text primary key,
+        last_synced_at timestamptz,
+        updated_at timestamptz not null default now()
+      );
+    `);
+
+    res.json({
+      success: true,
+      message: 'Tabela sync_state a fost creată.',
+    });
+  } catch (error) {
+    console.error('SYNC STATE TABLE ERROR:', error);
+
+    res.status(500).json({
+      success: false,
+      error: error.message,
+    });
+  }
+});
 app.post(
   '/admin/orders/sync-merchantpro',
   authMiddleware,
